@@ -61,13 +61,13 @@ exampleFurTrait2 = furTrait [recessiveAllele, recessiveAllele]
 
 
 catWithBlueFurAndBigEyes :: Genotype
-catWithBlueFurAndBigEyes = Genotype [
+catWithBlueFurAndBigEyes = [
     eyeSizeTrait [dominantAllele, recessiveAllele],
     furTrait [dominantAllele, recessiveAllele]
     ]
 
 catWithYellowFurAndBigEyes :: Genotype
-catWithYellowFurAndBigEyes = Genotype [
+catWithYellowFurAndBigEyes = [
     eyeSizeTrait [dominantAllele, recessiveAllele],
     furTrait [recessiveAllele, recessiveAllele]
     ]
@@ -126,7 +126,7 @@ data Trait = Trait {
 
 
 instance Eq Trait where
-    (Trait oneCode oneAlleles) == (Trait otherCode otherAlleles) 
+    (Trait oneCode oneAlleles) == (Trait otherCode otherAlleles)
         = sort oneAlleles == sort otherAlleles && oneCode == otherCode
 
 
@@ -140,15 +140,15 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 
         resultingTraits = map transformer countedAllAlleles
         transformer :: ((Allele, Allele), Int) -> (Trait, Ratio Int)
-        transformer ((alleleA, alleleB), number) = (newTrait, number % combinationNumber) 
+        transformer ((alleleA, alleleB), number) = (newTrait, number % combinationNumber)
             where
                 newTrait = Trait oneCode [alleleA, alleleB]
 
         combinationNumber = sum $ map snd countedAllAlleles
-        
+
         allAlleles = sort [sortTuple (x, y) | x <- oneAlleles, y <- otherAlleles]
         countedAllAlleles = concatMap mapper $ group allAlleles
-        
+
         mapper :: [(Allele, Allele)] -> [((Allele, Allele), Int)]
         mapper [] = []
         mapper (x:xs) = [(x, length xs + 1)]
@@ -164,11 +164,13 @@ toCode trait = case mconcat $ getAlleles trait of
     Allele Dominant -> codeToUpper $ representingCode trait
     Allele Recessive -> codeToLower $ representingCode trait
 
-newtype Genotype = Genotype { getTraits :: [Trait]}
-    deriving (Show)
+-- newtype Genotype = Genotype { getTraits :: [Trait]}
+--     deriving (Show)
+
+type Genotype = [Trait]
 
 toPhenotype :: Genotype -> Phenotype
-toPhenotype (Genotype traits) = Phenotype (map toCode traits)
+toPhenotype traits = Phenotype (map toCode traits)
 
 
 newtype Phenotype = Phenotype {getCodes :: [Code]}
@@ -212,10 +214,17 @@ fromGenotypes = Generation . map fromGenotype
 --             Left e -> [] -- NO LOGGING!!!!!!!
 --             Right new -> new
 
--- combineGenotypes :: Genotype -> Genotype -> Either String [[(Trait, Ratio Int)]]
--- combineGenotypes (Genotype []) _ = Left "First genotype is empty"
--- combineGenotypes _ (Genotype []) = Left "Second genotype is empty"
--- combineGenotypes (Genotype first) (Genotype second) = Right result
---     where
-        -- result = [x | (Right x) <- combined]
---         combined = [combine x y | x <- first, y <- second]
+
+geno1 :: Genotype
+geno1 = [eyeSizeTrait [recessiveAllele, dominantAllele],furTrait [recessiveAllele, dominantAllele]]
+
+geno2 :: Genotype
+geno2 = [eyeSizeTrait [dominantAllele, dominantAllele], furTrait [dominantAllele, dominantAllele]]
+
+combineGenotypes :: Genotype -> Genotype -> [(Genotype, Ratio Int)]
+combineGenotypes first second = foldr f [([], 1.0)] castedOffsprings
+    where
+        f one other =  [g x y | x <- one, y <- other]
+        g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
+        castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
+        offsprings = filter (/= [])[combine traitX traitY | traitX <- first, traitY <- second]
