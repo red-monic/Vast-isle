@@ -211,6 +211,8 @@ fromGenotypes xs = map (fromGenotype (length xs)) xs
 nextGen :: Generation -> Generation
 nextGen current = new
     where 
+        -- DUPLICATE OFFSPRINGS HERE!!!!!!!!!!!!!! FUCK
+        -- FIXME:
         new = concat [combineOffsprings x y | x <- current, y <- current]
 
 -- -- Что делать с ошибками?
