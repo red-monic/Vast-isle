@@ -131,12 +131,12 @@ instance Eq Trait where
 
 
 -- NOTE: is it really working?
-combine :: Trait -> Trait -> Either String [(Trait, Ratio Int)]
+combine :: Trait -> Trait -> [(Trait, Ratio Int)]
 combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
     where
         result = if oneCode == otherCode
-                 then Right resultingTraits
-                 else Left "Representing codes don't match"
+                 then resultingTraits
+                 else [] -- [Left "Representing codes don't match"]
 
         resultingTraits = map transformer countedAllAlleles
         transformer :: ((Allele, Allele), Int) -> (Trait, Ratio Int)
@@ -146,10 +146,9 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 
         combinationNumber = sum $ map snd countedAllAlleles
         
-        allAlleles = [sortTuple (x, y) | x <- oneAlleles, y <- otherAlleles]
+        allAlleles = sort [sortTuple (x, y) | x <- oneAlleles, y <- otherAlleles]
         countedAllAlleles = concatMap mapper $ group allAlleles
         
-        -- mapper :: [Allele] -> [(Allele, Int)]
         mapper :: [(Allele, Allele)] -> [((Allele, Allele), Int)]
         mapper [] = []
         mapper (x:xs) = [(x, length xs + 1)]
@@ -188,37 +187,35 @@ fromGenotypes :: [Genotype] -> Generation
 fromGenotypes = Generation . map fromGenotype
 
 
-next :: Generation -> Either String Generation
-next (Generation []) = Right $ Generation []
-next (Generation current) = res
-    where
-        -- current :: [(Offspring (Genotype [Trait]), ratio)]
-        -- matched = [ | x <- current, y <- current]
-        res = Right $ Generation new 
-        combined = combineGenotypes current current
-        new = []
+-- next :: Generation -> Either String Generation
+-- next (Generation []) = Right $ Generation []
+-- next (Generation current) = res
+--     where
+--         -- current :: [(Offspring (Genotype [Trait]), ratio)]
+--         -- matched = [ | x <- current, y <- current]
+--         res = Right $ Generation new 
+--         combined = combineGenotypes current
+--         new = []
 
 
--- Что делать с ошибками?
-combineOffsprings :: [Offspring] -> [Offspring] -> [Offspring]
-combineOffsprings [] _ = []
-combineOffsprings _ [] = []
-combineOffsprings (x:xs) (y:ys) = smth
-    where
-        smth = []
-        (Offspring genotypeX probX) = x
-        (Offspring genotypeY probY) = y
-        newGeno = combineGenotypes genotypeX genotypeY
-        r = case newGeno of 
-            Left e -> [] -- NO LOGGING!!!!!!!
-            Right new -> new
+-- -- Что делать с ошибками?
+-- combineOffsprings :: [Offspring] -> [Offspring] -> [Offspring]
+-- combineOffsprings [] _ = []
+-- combineOffsprings _ [] = []
+-- combineOffsprings (x:xs) (y:ys) = smth
+--     where
+--         smth = []
+--         (Offspring genotypeX probX) = x
+--         (Offspring genotypeY probY) = y
+--         newGeno = combineGenotypes genotypeX genotypeY
+--         r = case newGeno of 
+--             Left e -> [] -- NO LOGGING!!!!!!!
+--             Right new -> new
 
-combineGenotypes :: Genotype -> Genotype -> Either String [[(Trait, Ratio Int)]]
-combineGenotypes (Genotype []) _ = Left "First genotype is empty"
-combineGenotypes _ (Genotype []) = Left "Second genotype is empty"
-combineGenotypes (Genotype first) (Genotype second) = Right result
-    where
-        result = [x | (Right x) <- combined]
-        combined = [combine x y | x <- first, y <- second]
-
-        
+-- combineGenotypes :: Genotype -> Genotype -> Either String [[(Trait, Ratio Int)]]
+-- combineGenotypes (Genotype []) _ = Left "First genotype is empty"
+-- combineGenotypes _ (Genotype []) = Left "Second genotype is empty"
+-- combineGenotypes (Genotype first) (Genotype second) = Right result
+--     where
+        -- result = [x | (Right x) <- combined]
+--         combined = [combine x y | x <- first, y <- second]
