@@ -122,16 +122,30 @@ instance Ord Allele where
 data Trait = Trait {
     representingCode :: Code, -- TODO: donot like this name too
     getAlleles :: [Allele]
-} deriving (Show)
+}
 
+instance Show Trait where
+    show (Trait c a) = "Trait: " ++ show c ++ ", " ++ show a
+
+instance Ord Trait where
+    compare (Trait c1 _) (Trait c2 _) = compare (codeToLower c1) (codeToLower c2)
 
 instance Eq Trait where
     (Trait oneCode oneAlleles) == (Trait otherCode otherAlleles)
         = sort oneAlleles == sort otherAlleles && oneCode == otherCode
 
+-- | TODO: shit, floating!
+type ProbRatio = Float 
+
+
+-- sumUpper :: [(a, a), Int] -> (b, ProbRatio)
+
+listToElemWithLength :: [a] -> [(a, Int)]
+listToElemWithLength [] = []
+listToElemWithLength (x:xs) = [(x, length xs + 1)]
 
 -- NOTE: is it really working?
-combine :: Trait -> Trait -> [(Trait, Ratio Int)]
+combine :: Trait -> Trait -> [(Trait, ProbRatio)]
 combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
     where
         result = if oneCode == otherCode
@@ -139,19 +153,21 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
                  else [] -- [Left "Representing codes don't match"]
 
         resultingTraits = map transformer countedAllAlleles
-        transformer :: ((Allele, Allele), Int) -> (Trait, Ratio Int)
-        transformer ((alleleA, alleleB), number) = (newTrait, number % combinationNumber)
+        transformer :: ((Allele, Allele), Int) -> (Trait, ProbRatio)
+        transformer ((alleleA, alleleB), number) = (newTrait, 
+                fromIntegral number / fromIntegral combinationNumber
+            )
             where
                 newTrait = Trait oneCode [alleleA, alleleB]
 
         combinationNumber = sum $ map snd countedAllAlleles
 
         allAlleles = sort [sortTuple (x, y) | x <- oneAlleles, y <- otherAlleles]
-        countedAllAlleles = concatMap mapper $ group allAlleles
+        countedAllAlleles = concatMap listToElemWithLength $ group allAlleles
 
-        mapper :: [(Allele, Allele)] -> [((Allele, Allele), Int)]
-        mapper [] = []
-        mapper (x:xs) = [(x, length xs + 1)]
+        -- mapper :: [(Allele, Allele)] -> [((Allele, Allele), Int)]
+        -- mapper [] = []
+        -- mapper (x:xs) = [(x, length xs + 1)]
 
         sortTuple :: Ord a => (a, a) -> (a, a)
         sortTuple (one, other)
@@ -164,9 +180,6 @@ toCode trait = case mconcat $ getAlleles trait of
     Allele Dominant -> codeToUpper $ representingCode trait
     Allele Recessive -> codeToLower $ representingCode trait
 
--- newtype Genotype = Genotype { getTraits :: [Trait]}
---     deriving (Show)
-
 type Genotype = [Trait]
 
 toPhenotype :: Genotype -> Phenotype
@@ -177,54 +190,90 @@ newtype Phenotype = Phenotype {getCodes :: [Code]}
     deriving (Show)
 
 
-data Offspring = Offspring { getType :: Genotype, prob :: Ratio Int}
-    deriving (Show)
+data Offspring = Offspring { getType :: Genotype, prob :: ProbRatio}
+    deriving (Eq)
 
-fromGenotype :: Genotype -> Offspring
-fromGenotype genes = Offspring genes 1.0
 
-newtype Generation = Generation [Offspring]
+instance Show Offspring where
+    show (Offspring geno p) = "(Offspring: " ++ show geno ++ ", " ++ show p ++ ")"
+
+fromGenotype :: Int -> Genotype -> Offspring
+fromGenotype n genes = Offspring genes (1.0/n')
+    where
+        n' = fromIntegral n
+
+type Generation = [Offspring]
 
 fromGenotypes :: [Genotype] -> Generation
-fromGenotypes = Generation . map fromGenotype
+fromGenotypes xs = map (fromGenotype (length xs)) xs
 
 
--- next :: Generation -> Either String Generation
--- next (Generation []) = Right $ Generation []
--- next (Generation current) = res
---     where
---         -- current :: [(Offspring (Genotype [Trait]), ratio)]
---         -- matched = [ | x <- current, y <- current]
---         res = Right $ Generation new 
---         combined = combineGenotypes current
---         new = []
-
+nextGen :: Generation -> Generation
+nextGen current = new
+    where 
+        new = concat [combineOffsprings x y | x <- current, y <- current]
 
 -- -- Что делать с ошибками?
--- combineOffsprings :: [Offspring] -> [Offspring] -> [Offspring]
--- combineOffsprings [] _ = []
--- combineOffsprings _ [] = []
--- combineOffsprings (x:xs) (y:ys) = smth
---     where
---         smth = []
---         (Offspring genotypeX probX) = x
---         (Offspring genotypeY probY) = y
---         newGeno = combineGenotypes genotypeX genotypeY
---         r = case newGeno of 
---             Left e -> [] -- NO LOGGING!!!!!!!
---             Right new -> new
+combineOffsprings :: Offspring  -> Offspring -> [Offspring]
+combineOffsprings one other = if one == other then [] else result
+    where
+        resultingGeno :: [(Genotype, ProbRatio)]
+        resultingGeno = combineGenotypes (getType one) (getType other)
+
+
+
+        oneRatio = prob one
+        otherRatio = prob other
+        offstringCoeff = (otherRatio / (1 - oneRatio)) * (oneRatio / (1 - otherRatio))
+
+
+        castedGeno = map f resultingGeno
+        f (geno, genoRatio) = (geno, genoRatio * offstringCoeff)
+
+
+        summed = summingUp castedGeno
+        result = map (uncurry Offspring) summed
 
 
 geno1 :: Genotype
-geno1 = [eyeSizeTrait [recessiveAllele, dominantAllele],furTrait [recessiveAllele, dominantAllele]]
+geno1 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [recessiveAllele, dominantAllele]]
 
 geno2 :: Genotype
 geno2 = [eyeSizeTrait [dominantAllele, dominantAllele], furTrait [dominantAllele, dominantAllele]]
 
-combineGenotypes :: Genotype -> Genotype -> [(Genotype, Ratio Int)]
-combineGenotypes first second = foldr f [([], 1.0)] castedOffsprings
+
+
+geno3 :: Genotype
+geno3 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [dominantAllele, dominantAllele]]
+
+geno4 :: Genotype
+geno4 = [eyeSizeTrait [dominantAllele, recessiveAllele], furTrait [dominantAllele,recessiveAllele]]
+
+
+
+summingUp :: (Ord a, Ord b, Num b) => [([a], b)] -> [([a], b)]
+summingUp xs = summed
     where
+        sorted = sort $ map (\(l, v) -> (sort l, v)) xs
+        grouped = groupBy comparator sorted
+        comparator (l1, _) (l2, _) = l1 == l2
+
+        summed = concatMap getFirstValueFromListAndSumProbs grouped
+
+        -- | ha-ha
+        getFirstValueFromListAndSumProbs [] = []
+        getFirstValueFromListAndSumProbs ((x, currProb):xs') = [(x, currProb + sum (map snd xs'))]
+
+
+combineGenotypes :: Genotype -> Genotype -> [(Genotype, ProbRatio)]
+combineGenotypes first second = summingUp folded
+    where
+        folded = foldr f [([], 1.0)] castedOffsprings
         f one other =  [g x y | x <- one, y <- other]
         g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
         castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
-        offsprings = filter (/= [])[combine traitX traitY | traitX <- first, traitY <- second]
+        offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
+
+-- есть gen1, gen2 - одинаковые по длине и признаку? если признак есть только во втором?
+-- нужно combine каждый из 1 с каждым из второго N*N
+-- 
