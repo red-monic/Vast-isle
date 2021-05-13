@@ -9,6 +9,7 @@ import Data.Ratio
 import Data.Char
 import Data.List
 import qualified Data.String
+import Data.Maybe (listToMaybe, isNothing, isJust)
 -- import Data.Text
 
 run :: IO ()
@@ -22,23 +23,36 @@ run = putStrLn "Hello, world!"
 --     -- return (i, j)
 --     return ([1..5] )
 
+-- TODO:
+-- 1. formatting
+-- 2. good example (w/ and w/o pedofil)
+-- 3. simple matching with reduce
+-- 4. fix shitty bug (Kamil do it)
+-- 5. check pedofil is working
+-- 6. rollback — if 3 is done
+
 
 example1 :: IO ()
 example1 = do
-    print Dominant
-    print Recessive
-    print $ codeToUpper "S"
-    print $ codeToUpper "s"
-    print $ codeToLower "S"
-    print $ codeToLower "s"
-    print $ furTrait [recessiveAllele, dominantAllele]
-    print $ furTrait [dominantAllele, dominantAllele]
-    print $ furTrait [recessiveAllele, recessiveAllele]
-    print $ eyeSizeTrait [dominantAllele, recessiveAllele]
-    print catWithBlueFurAndBigEyes
-    print $ toPhenotype catWithBlueFurAndBigEyes
-    print $ toPhenotype catWithYellowFurAndBigEyes
+    -- print Dominant
+    -- print Recessive
+    -- print $ codeToUpper "S"
+    -- print $ codeToUpper "s"
+    -- print $ codeToLower "S"
+    -- print $ codeToLower "s"
+    -- print $ furTrait [recessiveAllele, dominantAllele]
+    -- print $ furTrait [dominantAllele, dominantAllele]
+    -- print $ furTrait [recessiveAllele, recessiveAllele]
+    -- print $ eyeSizeTrait [dominantAllele, recessiveAllele]
+    -- print catWithBlueFurAndBigEyes
+    -- print $ toPhenotype catWithBlueFurAndBigEyes
+    -- print $ toPhenotype catWithYellowFurAndBigEyes
+    print $ "First regular: " ++ show (next (fromGenotypes [geno1, geno2]))
+    -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
+    -- print $ "Second with pedofil: " ++ show (nextWithPedofil 2 Nothing (fromGenotypes [geno1, geno2]))
 
+next :: Generation -> Generation
+next = nextGen 1
 -- Predefined traits and genotypes aka creatures
 
 
@@ -137,7 +151,7 @@ instance Eq Trait where
         = sort oneAlleles == sort otherAlleles && oneCode == otherCode
 
 -- | TODO: shit, floating!
-type ProbRatio = Float 
+type ProbRatio = Float
 
 
 -- sumUpper :: [(a, a), Int] -> (b, ProbRatio)
@@ -156,7 +170,7 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 
         resultingTraits = map transformer countedAllAlleles
         transformer :: ((Allele, Allele), Int) -> (Trait, ProbRatio)
-        transformer ((alleleA, alleleB), number) = (newTrait, 
+        transformer ((alleleA, alleleB), number) = (newTrait,
                 fromIntegral number / fromIntegral combinationNumber
             )
             where
@@ -212,15 +226,18 @@ fromGenotypes :: [Genotype] -> Generation
 fromGenotypes xs = map (fromGenotype (length xs)) xs
 
 
-nextGen :: Generation -> Generation
-nextGen current = new
-    where 
+
+nextGen :: Int -> Generation -> Generation
+nextGen bad current | bad <= 0 = current
+nextGen 1 current = new
+    where
         -- DUPLICATE OFFSPRINGS HERE!!!!!!!!!!!!!! FUCK
         -- FIXME:
         -- [Offspring [Trair] ProbRatio]
         offspringsCombination = concat [combineOffsprings x y | x <- current, y <- current]
         preprocessedCombination = map (\(Offspring g p) -> (g, p)) offspringsCombination
         new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
+nextGen n current = nextGen (n-1) (next current)
 
 -- -- Что делать с ошибками?
 combineOffsprings :: Offspring  -> Offspring -> [Offspring]
@@ -278,5 +295,22 @@ combineGenotypes first second = summingUp folded
         offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
 
 -- есть gen1, gen2 - одинаковые по длине и признаку? если признак есть только во втором?
--- нужно combine каждый из 1 с каждым из второго N*N
--- 
+-- нужно combine каждый из 1 с каждым из второго N*N 
+
+getUpdated :: Maybe Genotype -> Generation -> Generation
+getUpdated pedofil current = updated
+    where
+        updated = current ++ appendix
+        appendix = case pedofil of 
+            Nothing -> []
+            (Just p) -> [fromGenotype (length current + 1) p]
+
+nextWithPedofil :: Int -> Maybe Genotype -> Generation -> Generation
+nextWithPedofil bad _ current | bad <= 0 = current
+nextWithPedofil 1 pedofil current = next (getUpdated pedofil current)
+nextWithPedofil n pedofil current = nextWithPedofil (n-1) newPedofil newGen
+    where
+        newGen = nextGen 1 updated
+        updated = getUpdated pedofil current
+        newPedofil = fmap getType (listToMaybe newGen)
+
