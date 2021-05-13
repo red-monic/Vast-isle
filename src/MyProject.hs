@@ -92,7 +92,7 @@ instance Show Allele where
     show allele = "Allele: " ++ show (getSort allele)
 
 instance Show Trait where
-    show (Trait c [x, y]) = getAllelle c x ++ getAllelle c y
+    show (Trait c [x, y]) = getCode c x ++ getCode c y
     show (Trait _ _) = "Trait: empty"
 
 instance Show Offspring where
