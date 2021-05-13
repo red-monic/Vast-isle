@@ -353,14 +353,12 @@ combineOffsprings2 one other = if one == other then [] else result
     where
         resultingGeno :: [(Genotype, ProbRatio)]
         resultingGeno = combineGenotypes (getType one) (getType other)
-
-        oneRatio = prob one
-        otherRatio = prob other
-        offstringCoeff = (otherRatio / (1 - oneRatio)) * (oneRatio / (1 - otherRatio))
+        result = map (uncurry Offspring) castedGeno
         castedGeno = map f resultingGeno
         f (geno, genoRatio) = (geno, genoRatio * offstringCoeff)
-        summed = summingUp castedGeno
-        result = map (uncurry Offspring) summed
+        offstringCoeff = (otherRatio / (1 - oneRatio)) * (oneRatio / (1 - otherRatio))
+        oneRatio = prob one
+        otherRatio = prob other
 
 osp3 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
 osp4 = Offspring [furTrait [recessiveAllele, dominantAllele], eyeSizeTrait [recessiveAllele, dominantAllele]] (2/3)
