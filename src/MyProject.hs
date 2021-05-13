@@ -38,6 +38,7 @@ example1 = do
     print catWithBlueFurAndBigEyes
     print $ toPhenotype catWithBlueFurAndBigEyes
     print $ toPhenotype catWithYellowFurAndBigEyes
+    print $ nextGen (fromGenotypes [geno1, geno2])
 
 -- Predefined traits and genotypes aka creatures
 
