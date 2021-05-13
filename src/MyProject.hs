@@ -128,7 +128,9 @@ instance Show Trait where
     show (Trait c a) = "Trait: " ++ show c ++ ", " ++ show a
 
 instance Ord Trait where
-    compare (Trait c1 _) (Trait c2 _) = compare (codeToLower c1) (codeToLower c2)
+    compare (Trait c1 a1) (Trait c2 a2) = if c1 == c2
+                                        then compare (sort a1) (sort a2)
+                                        else compare (codeToLower c1) (codeToLower c2)
 
 instance Eq Trait where
     (Trait oneCode oneAlleles) == (Trait otherCode otherAlleles)
@@ -193,6 +195,8 @@ newtype Phenotype = Phenotype {getCodes :: [Code]}
 data Offspring = Offspring { getType :: Genotype, prob :: ProbRatio}
     deriving (Eq)
 
+instance Ord Offspring where
+    compare (Offspring g1 _) (Offspring g2 _) = compare (sort g1) (sort g2)
 
 instance Show Offspring where
     show (Offspring geno p) = "(Offspring: " ++ show geno ++ ", " ++ show p ++ ")"
@@ -213,7 +217,10 @@ nextGen current = new
     where 
         -- DUPLICATE OFFSPRINGS HERE!!!!!!!!!!!!!! FUCK
         -- FIXME:
-        new = concat [combineOffsprings x y | x <- current, y <- current]
+        -- [Offspring [Trair] ProbRatio]
+        offspringsCombination = concat [combineOffsprings x y | x <- current, y <- current]
+        preprocessedCombination = map (\(Offspring g p) -> (g, p)) offspringsCombination
+        new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
 
 -- -- Что делать с ошибками?
 combineOffsprings :: Offspring  -> Offspring -> [Offspring]
@@ -222,16 +229,12 @@ combineOffsprings one other = if one == other then [] else result
         resultingGeno :: [(Genotype, ProbRatio)]
         resultingGeno = combineGenotypes (getType one) (getType other)
 
-
-
         oneRatio = prob one
         otherRatio = prob other
         offstringCoeff = (otherRatio / (1 - oneRatio)) * (oneRatio / (1 - otherRatio))
 
-
         castedGeno = map f resultingGeno
         f (geno, genoRatio) = (geno, genoRatio * offstringCoeff)
-
 
         summed = summingUp castedGeno
         result = map (uncurry Offspring) summed
@@ -242,8 +245,6 @@ geno1 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [recessiveAlle
 
 geno2 :: Genotype
 geno2 = [eyeSizeTrait [dominantAllele, dominantAllele], furTrait [dominantAllele, dominantAllele]]
-
-
 
 geno3 :: Genotype
 geno3 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [dominantAllele, dominantAllele]]
