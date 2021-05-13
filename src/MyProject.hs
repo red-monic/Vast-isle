@@ -238,6 +238,9 @@ nextGen :: Int -> Generation -> Generation
 nextGen bad current | bad <= 0 = current
 nextGen 1 current = new
     where
+
+        -- Why probability is calculated so? 
+        -- Ask me in person if you want, I can't explain it here
         probability xs 
             | length xs <= 1 = fromIntegral (length xs)
             | otherwise = 1 / fromIntegral (length xs * (length xs - 1))
