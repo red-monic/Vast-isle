@@ -59,13 +59,12 @@ next = nextGen 1
 -- example of fur trait, see code
 -- NOTE: dominant is blue, recessive is yellow
 furTrait :: [Allele] -> Trait
-furTrait = Trait "Fur"
+furTrait = Trait "A"
 
 -- example of eye trait, see code
 -- NOTE: dominant is big, recessive is small
 eyeSizeTrait :: [Allele] -> Trait
-eyeSizeTrait = Trait "Eye"
-
+eyeSizeTrait = Trait "B"
 
 exampleFurTrait1 :: Trait
 exampleFurTrait1 = furTrait [dominantAllele, recessiveAllele]
@@ -139,7 +138,15 @@ data Trait = Trait {
 }
 
 instance Show Trait where
-    show (Trait c a) = "Trait: " ++ show c ++ ", " ++ show a
+    show (Trait c [x, y]) = getAllelle c x ++ getAllelle c y
+    show (Trait _ _) = "Trait: empty"
+    
+
+getAllelle :: Code -> Allele -> Code
+getAllelle code trait
+    | trait == Allele Dominant = codeToUpper code
+    | otherwise = codeToLower code
+
 
 instance Ord Trait where
     compare (Trait c1 a1) (Trait c2 a2) = if c1 == c2
@@ -270,7 +277,6 @@ geno4 :: Genotype
 geno4 = [eyeSizeTrait [dominantAllele, recessiveAllele], furTrait [dominantAllele,recessiveAllele]]
 
 
-
 summingUp :: (Ord a, Ord b, Num b) => [([a], b)] -> [([a], b)]
 summingUp xs = summed
     where
@@ -301,7 +307,7 @@ getUpdated :: Maybe Genotype -> Generation -> Generation
 getUpdated pedofil current = updated
     where
         updated = current ++ appendix
-        appendix = case pedofil of 
+        appendix = case pedofil of
             Nothing -> []
             (Just p) -> [fromGenotype (length current + 1) p]
 
@@ -314,3 +320,47 @@ nextWithPedofil n pedofil current = nextWithPedofil (n-1) newPedofil newGen
         updated = getUpdated pedofil current
         newPedofil = fmap getType (listToMaybe newGen)
 
+-- combine but without reduce and sort
+combine2 :: Trait -> Trait -> [(Trait, ProbRatio)]
+combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
+    where
+        result = if oneCode == otherCode
+                 then resultingTraits
+                 else [] -- [Left "Representing codes don't match"]
+
+        resultingTraits = map transformer allAlleles
+        transformer :: (Allele, Allele) -> (Trait, ProbRatio)
+        transformer (alleleA, alleleB) = (newTrait, 1 / fromIntegral combinationNumber)
+            where
+                newTrait = Trait oneCode [alleleA, alleleB]
+
+        combinationNumber = length allAlleles
+        allAlleles = [(x, y) | x <- oneAlleles, y <- otherAlleles]
+
+-- combine genotypes but without reduce and sort
+combineGenotypes2 :: Genotype -> Genotype -> [(Genotype, ProbRatio)]
+combineGenotypes2 first second = summingUp folded
+    where
+        folded = foldr f [([], 1.0)] castedOffsprings
+        f one other =  [g x y | x <- one, y <- other]
+        g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
+        castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
+        offsprings = filter (/= []) [combine2 traitX traitY | traitX <- first, traitY <- second]
+
+-- combine offsprings but without reduce and sort
+combineOffsprings2 :: Offspring  -> Offspring -> [Offspring]
+combineOffsprings2 one other = if one == other then [] else result
+    where
+        resultingGeno :: [(Genotype, ProbRatio)]
+        resultingGeno = combineGenotypes (getType one) (getType other)
+
+        oneRatio = prob one
+        otherRatio = prob other
+        offstringCoeff = (otherRatio / (1 - oneRatio)) * (oneRatio / (1 - otherRatio))
+        castedGeno = map f resultingGeno
+        f (geno, genoRatio) = (geno, genoRatio * offstringCoeff)
+        summed = summingUp castedGeno
+        result = map (uncurry Offspring) summed
+
+osp3 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
+osp4 = Offspring [furTrait [recessiveAllele, dominantAllele], eyeSizeTrait [recessiveAllele, dominantAllele]] (2/3)
