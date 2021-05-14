@@ -311,7 +311,7 @@ nextGen bad current | bad <= 0 = current
 nextGen 1 current = new
     where
         probability xs 
-            | length xs <= 1 = fromIntegral 0 
+            | length xs <= 1 = 0 
             | otherwise =  1.0 / fromIntegral (length xs * (length xs - 1))
         
         offspringsCombination = concat [combineOffsprings x y | x <- current, y <- current]
