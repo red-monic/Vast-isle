@@ -281,15 +281,7 @@ combineOffsprings one other = if one == other then [] else result
     where
         resultingGeno :: [(Genotype, ProbRatio)]
         resultingGeno = combineGenotypes (getType one) (getType other)
-
-        oneRatio = prob one
-        otherRatio = prob other
-        offstringCoeff = (otherRatio / (1 - oneRatio)) * (oneRatio / (1 - otherRatio))
-
-        castedGeno = map f resultingGeno
-        f (geno, genoRatio) = (geno, genoRatio * offstringCoeff)
-
-        summed = summingUp castedGeno
+        summed = summingUp resultingGeno
         result = map (uncurry Offspring) summed
 
 
@@ -325,11 +317,12 @@ nextGen :: Int -> Generation -> Generation
 nextGen bad current | bad <= 0 = current
 nextGen 1 current = new
     where
-        -- DUPLICATE OFFSPRINGS HERE!!!!!!!!!!!!!! FUCK
-        -- FIXME:
-        -- [Offspring [Trair] ProbRatio]
+        probability xs 
+            | length xs <= 1 = fromIntegral 0 
+            | otherwise =  1.0 / fromIntegral (length xs * (length xs - 1))
+        
         offspringsCombination = concat [combineOffsprings x y | x <- current, y <- current]
-        preprocessedCombination = map (\(Offspring g p) -> (g, p)) offspringsCombination
+        preprocessedCombination = map (\(Offspring g p) -> (g, p * (probability current))) offspringsCombination
         new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
 nextGen n current = nextGen (n-1) (next current)
 
