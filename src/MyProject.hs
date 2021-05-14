@@ -371,10 +371,5 @@ combineOffsprings2 one other = if one == other then [] else result
     where
         resultingGeno :: [(Genotype, ProbRatio)]
         resultingGeno = combineGenotypes (getType one) (getType other)
-        result = map (uncurry Offspring) castedGeno
-        castedGeno = map f resultingGeno
-        f (geno, genoRatio) = (geno, genoRatio * offstringCoeff)
-        offstringCoeff = (otherRatio / (1 - oneRatio)) * (oneRatio / (1 - otherRatio))
-        oneRatio = prob one
-        otherRatio = prob other
+        result = map (uncurry Offspring) resultingGeno
 
