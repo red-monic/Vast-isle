@@ -377,8 +377,8 @@ combineOffsprings2 one other = if one == other then [] else result
         result = map (uncurry Offspring) resultingGeno
 
 -- combine generations but without reduce and sort
-nextGen2 :: Int -> Generation -> [Generation]
-nextGen2 bad current | bad <= 0 = []
+nextGen2 :: Int -> Generation -> Generation
+nextGen2 bad current | bad <= 0 = current
 nextGen2 1 current = new
     where
         probability xs 
@@ -388,6 +388,6 @@ nextGen2 1 current = new
         offspringsCombination = filter ((2 == ) . length) $ subsequences current
         newGenerations = filter (not . null) [combineOffsprings2 x y | [x, y] <- offspringsCombination]
 
-        new = map (\generation -> map (\(Offspring g p) -> Offspring g (p * (probability current))) generation) newGenerations
-nextGen2 n current = nextGen2 (n-1) (concat (nextGen2 1 current))
+        new = concatMap (\generation -> map (\(Offspring g p) -> Offspring g (p * (probability current))) generation) newGenerations
+nextGen2 n current = nextGen2 (n-1) (nextGen2 1 current)
 
