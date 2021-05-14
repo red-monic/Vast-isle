@@ -10,6 +10,7 @@ import Data.Char
 import Data.List
 import qualified Data.String
 import Data.Maybe (listToMaybe, isNothing, isJust)
+import qualified Data.Bifunctor
 -- import Data.Text
 
 run :: IO ()
@@ -50,34 +51,26 @@ example1 = do
     -- print catWithBlueFurAndBigEyes
     -- print $ toPhenotype catWithBlueFurAndBigEyes
     -- print $ toPhenotype catWithYellowFurAndBigEyes
-    print $ "First regular: " ++ show (next (fromGenotypes [geno1, geno2]))
+    -- print $ "First regular: " ++ show (next (fromGenotypes [geno1, geno2]))
     -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
     -- print $ "Second with pedofil: " ++ show (nextWithPedofil 2 Nothing (fromGenotypes [geno1, geno2]))
+    print "Given generation is [(DR, DD), (DR, RR)], let's compute rollback from its next gen"
+    -- print $ rollback (next sampleGeneration2)
 
 --------------------------------------------------------------------------------
 -- |                   Data, newtypes and types declaration                    |
 --------------------------------------------------------------------------------
 
--- TODO: donot like naming of Sort 
-data Sort = Dominant | Recessive
-    deriving (Show, Eq)
+data MyCode = A | B | C
+data AllelePair = RR | DR | DD
+data Trait a = Trait a AllelePair
 
-newtype Allele = Allele {getSort :: Sort}
-    deriving (Eq)
 
-type Code = String
-
-data Trait = Trait {
-    representingCode :: Code, -- TODO: donot like this name too
-    getAlleles :: [Allele]
-}
-
-newtype Phenotype = Phenotype {getCodes :: [Code]}
-    deriving (Show)
-
+-- | Represents a single organism 
 type Genotype = [Trait]
 
--- | TODO: shit, floating!
+-- | The float type is not the best representation for the probability, 
+-- | but it's fine for now
 type ProbRatio = Float
 
 data Offspring = Offspring { getType :: Genotype, prob :: ProbRatio}
@@ -160,18 +153,23 @@ exampleFurTrait2 = furTrait [recessiveAllele, recessiveAllele]
 
 catWithBlueFurAndBigEyes :: Genotype
 catWithBlueFurAndBigEyes = [
-    eyeSizeTrait [dominantAllele, recessiveAllele],
-    furTrait [dominantAllele, recessiveAllele]
+        eyeSizeTrait [dominantAllele, recessiveAllele], -- DR
+        furTrait [dominantAllele, recessiveAllele] -- DR
     ]
 
 catWithYellowFurAndBigEyes :: Genotype
 catWithYellowFurAndBigEyes = [
-    eyeSizeTrait [dominantAllele, recessiveAllele],
-    furTrait [recessiveAllele, recessiveAllele]
+        eyeSizeTrait [dominantAllele, recessiveAllele], -- DR
+        furTrait [recessiveAllele, recessiveAllele] -- RR
     ]
 
-firstGeneration :: Generation
-firstGeneration = fromGenotypes [catWithBlueFurAndBigEyes, catWithYellowFurAndBigEyes]
+-- [(DR, DR), (DR, RR)]
+sampleGeneration1 :: Generation
+sampleGeneration1 = fromGenotypes [catWithBlueFurAndBigEyes, catWithYellowFurAndBigEyes]
+
+-- [(DR, DD), (DR, RR)]
+sampleGeneration2 :: Generation
+sampleGeneration2 = fromGenotypes [geno3, geno5]
 
 -- end of Predefined traits and genotypes aka creatures
 
@@ -187,10 +185,16 @@ geno3 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [dominantAllel
 geno4 :: Genotype
 geno4 = [eyeSizeTrait [dominantAllele, recessiveAllele], furTrait [dominantAllele,recessiveAllele]]
 
-osp1 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
+geno5 :: Genotype
+geno5 = [eyeSizeTrait [dominantAllele, recessiveAllele], furTrait [recessiveAllele, recessiveAllele]]
 
+osp1 :: Offspring
+osp1 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
+osp2 :: Offspring
 osp2 = Offspring [furTrait [dominantAllele, recessiveAllele], eyeSizeTrait [dominantAllele, recessiveAllele]] (2/3)
+osp3 :: Offspring
 osp3 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
+osp4 :: Offspring
 osp4 = Offspring [furTrait [recessiveAllele, dominantAllele], eyeSizeTrait [recessiveAllele, dominantAllele]] (2/3)
 
 
@@ -240,35 +244,23 @@ fromGenotypes :: [Genotype] -> Generation
 fromGenotypes xs = map (fromGenotype (length xs)) xs
 
 
--- NOTE: is it really working?
 combine :: Trait -> Trait -> [(Trait, ProbRatio)]
 combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
     where
         result = if oneCode == otherCode
-                 then resultingTraits
-                 else [] -- [Left "Representing codes don't match"]
+                 then map (Data.Bifunctor.first (Trait oneCode)) resultingTraits
+                 else []
 
-        resultingTraits = map transformer countedAllAlleles
-        transformer :: ((Allele, Allele), Int) -> (Trait, ProbRatio)
-        transformer ((alleleA, alleleB), number) = (newTrait,
-                fromIntegral number / fromIntegral combinationNumber
-            )
-            where
-                newTrait = Trait oneCode [alleleA, alleleB]
-
-        combinationNumber = sum $ map snd countedAllAlleles
-
-        allAlleles = sort [sortTuple (x, y) | x <- oneAlleles, y <- otherAlleles]
-        countedAllAlleles = concatMap listToElemWithLength $ group allAlleles
-
-        -- mapper :: [(Allele, Allele)] -> [((Allele, Allele), Int)]
-        -- mapper [] = []
-        -- mapper (x:xs) = [(x, length xs + 1)]
-
-        sortTuple :: Ord a => (a, a) -> (a, a)
-        sortTuple (one, other)
-            | one <= other = (one, other)
-            | otherwise = (other, one)
+        resultingTraits = case (oneAlleles, otherAlleles) of
+            (RR, RR) -> [(RR, 1.0)]
+            (RR, DR) -> [(DR, 0.5), (RR, 0.5)]
+            (RR, DD) -> [(DR, 1.0)]
+            (DR, RR) -> [(DR, 0.5), (RR, 0.5)]
+            (DR, DR) -> [(DD, 0.5), (RR, 0.5)]
+            (DR, DD) -> [(DD, 0.5), (DR, 0.5)]
+            (DD, RR) -> [(DR, 1.0)]
+            (DD, DR) -> [(DD, 0.5), (RR, 0.5)]
+            (DD, DD) -> [(DD, 1.0)]
 
 
 combineGenotypes :: Genotype -> Genotype -> [(Genotype, ProbRatio)]
@@ -281,6 +273,10 @@ combineGenotypes first second = summingUp folded
         offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
 
 
+
+instance Show [Offspring] where
+    show = ""
+        
 -- -- Что делать с ошибками?
 combineOffsprings :: Offspring  -> Offspring -> [Offspring]
 combineOffsprings one other = if one == other then [] else result
@@ -292,7 +288,7 @@ combineOffsprings one other = if one == other then [] else result
 
 
 next :: Generation -> Generation
-next = nextGen 1
+next = nextGen2 1
 
 summingUp :: (Ord a, Ord b, Num b) => [([a], b)] -> [([a], b)]
 summingUp xs = summed
@@ -313,10 +309,10 @@ nextGen :: Int -> Generation -> Generation
 nextGen bad current | bad <= 0 = current
 nextGen 1 current = new
     where
-        probability xs 
-            | length xs <= 1 = 0 
+        probability xs
+            | length xs <= 1 = 0
             | otherwise =  1.0 / fromIntegral (length xs * (length xs - 1))
-        
+
         offspringsCombination = concat [combineOffsprings x y | x <- current, y <- current]
         preprocessedCombination = map (\(Offspring g p) -> (g, p * (probability current))) offspringsCombination
         new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
@@ -384,13 +380,69 @@ nextGen2 :: Int -> Generation -> Generation
 nextGen2 bad current | bad <= 0 = current
 nextGen2 1 current = new
     where
-        probability xs 
-            | length xs <= 1 = 0 
+        probability xs
+            | length xs <= 1 = 0
             | otherwise =  2.0 / fromIntegral (length xs * (length xs - 1))
-        
+
         offspringsCombination = filter ((2 == ) . length) $ subsequences current
         newGenerations = filter (not . null) [combineOffsprings2 x y | [x, y] <- offspringsCombination]
 
         new = concatMap (\generation -> map (\(Offspring g p) -> Offspring g (p * (probability current))) generation) newGenerations
 nextGen2 n current = nextGen2 (n-1) (nextGen2 1 current)
+
+
+
+-- -- | returns element at a given position from the list
+-- takeN :: Int -> [a] -> Maybe a
+-- takeN index xs = listToMaybe (take index xs)
+
+
+-- -- | returns combinations of 2 from the given list
+-- -- | with diffrenent elements in one combination
+-- getCombinations :: [a] -> [[a]]
+-- getCombinations xs = filter ((2 == ) . length) $ subsequences xs
+
+-- -- | Rollbacks the generation to the previous one
+-- -- | expects to get the result without any reducing 
+-- -- | i.e. if there is two offsprings Aa, they should not be 
+-- -- | reduced to one with ratio as sum of the previous ratios
+-- -- rollback :: Generation -> Generation
+-- rollback current = extracted
+--     where 
+--         previous = []
+--         extracted = [extractParents (getType x) (getType y) | [x, y] <- getCombinations current]
+
+--         -- oneTraits :: [[Trait]]
+-- --         oneTraits = map getType one
+-- --         otherTraits = map getType other
+
+--         -- extractParents :: Genotype -> Genotype -> (Genotype, Genotype)
+--         extractParents one other = extracted
+--             where
+--                 extracted = map (uncurry getParentTraits) (zip one other)
+
+--                 getParentTraits :: Trait -> Trait -> (Trait, Trait)
+--                 getParentTraits (Trait code1 all1) (Trait _ all2) = result
+--                     where
+--                         fl xs = map (\(Just x) -> x) (filter isJust xs)
+
+--                         result = (
+--                             Trait code1 (fl [takeN 0 all1, takeN 0 all2]),
+--                             Trait code1 (fl [takeN 1 all1, takeN 1 all2])
+--                             )
+
+--                 -- zipped = zip one other
+--                 -- combined = map f zippedAlleles
+--                 -- f (oneAll, otherAll, trait) = [
+--                 --     Trait (representingCode trait) [x, y] | (x, y) <- zip oneAll otherAll
+--                 --     ]
+
+--                 -- parents = ([], [])
+
+--                 -- parentTraits = [extractParentTraits x y | x <- one, y <- other]
+
+
+--         -- extractParentTraits :: Trait -> Trait -> [Trait]
+--         -- extractParentTraits one other = parents 
+--         --     where
 
