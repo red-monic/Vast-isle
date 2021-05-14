@@ -23,14 +23,8 @@ run = putStrLn "Hello, world!"
 
 -- TODO:
 -- 2. good example (w/ and w/o pedofil)
--- 5. check pedofil is working
 -- 6. rollback — if 3 is done
 -- 7. refactor
-
--- DONE:
--- 1. formatting
--- 3. simple matching with reduce
--- 4. fix shitty bug (Kamil do it)
 
 
 -- | an example of a problem solved with our library
@@ -49,7 +43,6 @@ example1 = do
     -- print catWithBlueFurAndBigEyes
     print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
     -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
-    -- print $ "Second with pedofil: " ++ show (nextWithPedofil 2 Nothing (fromGenotypes [geno1, geno2]))
     print "Given generation is [(DR, DD), (DR, RR)], let's compute rollback from its next gen"
     -- print $ rollback (next sampleGeneration2)
 
@@ -288,28 +281,6 @@ nextGen 1 current = Generation new
         preprocessedCombination = map (\(Offspring g p) -> (g, p * probability (getGen current))) offspringsCombination
         new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
 nextGen n current = nextGen (n-1) (next current)
-
--- есть gen1, gen2 - одинаковые по длине и признаку? если признак есть только во втором?
--- нужно combine каждый из 1 с каждым из второго N*N 
-
--- getUpdated :: Maybe Genotype -> Generation -> Generation
--- getUpdated pedofil current = Generation updated
---     where
---         updated = getGeneration current ++ appendix
---         appendix = case pedofil of
---             Nothing -> []
---             (Just p) -> [fromGenotype (length (getGeneration current) + 1) p]
-
--- nextWithPedofil :: Int -> Maybe Genotype -> Generation -> Generation
--- nextWithPedofil bad _ current | bad <= 0 = current
--- nextWithPedofil 1 pedofil current = next (getUpdated pedofil current)
--- nextWithPedofil n pedofil current = nextWithPedofil (n-1) newPedofil newGen
---     where
---         newGen = nextGen 1 updated
---         updated = getUpdated pedofil current
---         newPedofil = fmap getType (listToMaybe $ getGeneration newGen)
-
--- second version of combinations to be able to rollback to parents genotypes
 
 -- combine but without reduce and sort
 combine2 :: Eq a => Trait a -> Trait a -> [(Trait a, ProbRatio)]
