@@ -184,6 +184,9 @@ geno3 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [dominantAllel
 geno4 :: Genotype
 geno4 = [eyeSizeTrait [dominantAllele, recessiveAllele], furTrait [dominantAllele,recessiveAllele]]
 
+osp1 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
+
+osp2 = Offspring [furTrait [dominantAllele, recessiveAllele], eyeSizeTrait [dominantAllele, recessiveAllele]] (2/3)
 osp3 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
 osp4 = Offspring [furTrait [recessiveAllele, dominantAllele], eyeSizeTrait [recessiveAllele, dominantAllele]] (2/3)
 
@@ -357,7 +360,7 @@ combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 
 -- combine genotypes but without reduce and sort
 combineGenotypes2 :: Genotype -> Genotype -> [(Genotype, ProbRatio)]
-combineGenotypes2 first second = summingUp folded
+combineGenotypes2 first second = folded
     where
         folded = foldr f [([], 1.0)] castedOffsprings
         f one other =  [g x y | x <- one, y <- other]
@@ -370,6 +373,6 @@ combineOffsprings2 :: Offspring  -> Offspring -> [Offspring]
 combineOffsprings2 one other = if one == other then [] else result
     where
         resultingGeno :: [(Genotype, ProbRatio)]
-        resultingGeno = combineGenotypes (getType one) (getType other)
+        resultingGeno = combineGenotypes2 (getType one) (getType other)
         result = map (uncurry Offspring) resultingGeno
 
