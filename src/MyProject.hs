@@ -5,6 +5,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module MyProject where
 
 import Data.Ratio
@@ -31,6 +33,7 @@ run = putStrLn "Hello, world!"
 -- 4. fix shitty bug (Kamil do it)
 
 
+-- | an example of a problem solved with our library
 example1 :: IO ()
 example1 = do
     -- print Dominant
@@ -55,27 +58,31 @@ example1 = do
 --------------------------------------------------------------------------------
 
 data MyCode = A | B | C
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 data AllelePair = RR | DR | DD
     deriving (Eq, Show, Ord)
 
 -- | Represents a single trait i.e. fur
 -- | Has a pair of alleles which corresponds to 
 data Trait a = Trait a AllelePair
-deriving instance Eq a => Eq (Trait a)
-
+deriving instance Eq a => Eq (Trait a) 
+deriving instance Ord a => Ord (Trait a) 
 
 -- | Represents a single organism 
 type Genotype a = [Trait a]
--- deriving instance Show a => Show (Genotype a)
 
 -- | The float type is not the best representation for the probability, 
 -- | but it's fine for now
 type ProbRatio = Float
 
-data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio}
-    deriving (Eq)
 
+-- | Represents an offspring in the generation. It is an organism which
+-- | will be produced with some ratio
+data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio}
+deriving instance Eq a => Eq (Offspring a)
+
+
+-- | A single generation of offsprings
 newtype Generation a = Generation {getGeneration :: [Offspring a]}
 
 --------------------------------------------------------------------------------
@@ -95,6 +102,8 @@ instance (Show a) => Show (Offspring a) where
 instance Show a => Show (Generation a) where
     show (Generation gen) = "Generation:\n\t" ++ concatMap ((++ "\n\t") . show) gen
 
+-- instance Show a => Show (Genotype a) where
+--     show traits = "Genotype: \n\t" ++ concatMap ((++ "\n\t") . show) traits
 
 -- | Ords |
 
@@ -103,7 +112,7 @@ instance Show a => Show (Generation a) where
 --                                         then compare (sort a1) (sort a2)
 --                                         else compare (codeToLower c1) (codeToLower c2)
 
-instance (Ord a) => Ord (Offspring a) where
+instance Ord a => Ord (Offspring a) where
     compare (Offspring g1 _) (Offspring g2 _) = compare (sort g1) (sort g2)
 
 
@@ -120,13 +129,11 @@ instance (Ord a) => Ord (Offspring a) where
 -- |      Predefined traits and genotypes aka creatures       |
 
 
--- example of fur trait, see code
--- NOTE: dominant is blue, recessive is yellow
+-- in this example we match "fur" <=> A
 furTrait :: AllelePair -> Trait MyCode
 furTrait = Trait A
 
--- example of eye trait, see code
--- NOTE: dominant is big, recessive is small
+-- in this example we match "eyeSize" <=> B
 eyeSizeTrait :: AllelePair -> Trait MyCode
 eyeSizeTrait = Trait B
 
@@ -230,7 +237,7 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
             (DD, DD) -> [(DD, 1.0)]
 
 
-combineGenotypes :: Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
+combineGenotypes :: Ord a => Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
 combineGenotypes first second = summingUp folded
     where
         offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
@@ -240,7 +247,7 @@ combineGenotypes first second = summingUp folded
         folded = foldr f [([], 1.0)] castedOffsprings
 
 
-combineOffsprings :: forall a. Offspring a -> Offspring a -> Generation a
+combineOffsprings :: forall a. (Eq a, Ord a) => Offspring a -> Offspring a -> Generation a
 combineOffsprings one other = if one == other then Generation [] else Generation result
     where
         resultingGeno :: [(Genotype a, ProbRatio)]
@@ -249,7 +256,7 @@ combineOffsprings one other = if one == other then Generation [] else Generation
         result = map (uncurry Offspring) summed
 
 
-next :: Generation a -> Generation a
+next :: Eq a => Generation a -> Generation a
 next = nextGen2 1
 
 summingUp :: (Ord a, Ord b, Num b) => [([a], b)] -> [([a], b)]
@@ -267,7 +274,7 @@ summingUp xs = summed
         compact ((x, currProb):xs') = [(x, currProb + sum (map snd xs'))]
 
 
-nextGen :: Int -> Generation a -> Generation a
+nextGen :: Ord a => Int -> Generation a -> Generation a
 nextGen bad current | bad <= 0 = current
 nextGen 1 current = Generation new
     where
@@ -304,24 +311,27 @@ nextGen n current = nextGen (n-1) (next current)
 -- second version of combinations to be able to rollback to parents genotypes
 
 -- combine but without reduce and sort
-combine2 :: Trait a -> Trait a -> [(Trait a, ProbRatio)]
+combine2 :: Eq a => Trait a -> Trait a -> [(Trait a, ProbRatio)]
 combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
     where
         result = if oneCode == otherCode
-                 then resultingTraits
+                 then map (Data.Bifunctor.first (Trait oneCode)) resultingTraits
                  else [] -- [Left "Representing codes don't match"]
 
-        resultingTraits = map transformer allAlleles
-        -- transformer :: (Allele, Allele) -> (Trait, ProbRatio)
-        transformer (alleleA, alleleB) = (newTrait, 1 / fromIntegral combinationNumber)
-            where
-                newTrait = Trait oneCode [alleleA, alleleB]
+        resultingTraits = case (oneAlleles, otherAlleles) of
+            (RR, RR) -> [(RR, 0.25), (RR, 0.25), (RR, 0.25), (RR, 0.25)]
+            (RR, DR) -> [(DR, 0.25), (DR, 0.25), (RR, 0.25), (RR, 0.25)]
+            (RR, DD) -> [(DR, 0.25), (DR, 0.25), (DR, 0.25), (DR, 0.25)]
+            (DR, RR) -> [(DR, 0.25), (DR, 0.25), (RR, 0.25), (RR, 0.25)]
+            (DR, DR) -> [(DD, 0.25), (DR, 0.25), (DR, 0.25), (RR, 0.25)]
+            (DR, DD) -> [(DD, 0.25), (DD, 0.25), (DR, 0.25), (DR, 0.25)]
+            (DD, RR) -> [(DR, 0.25), (DR, 0.25), (DR, 0.25), (DR, 0.25)]
+            (DD, DR) -> [(DD, 0.25), (DD, 0.25), (RR, 0.25), (RR, 0.25)]
+            (DD, DD) -> [(DD, 0.25), (DD, 0.25), (DD, 0.25), (DD, 0.25)]
 
-        combinationNumber = length allAlleles
-        allAlleles = [(x, y) | x <- oneAlleles, y <- otherAlleles]
 
 -- combine genotypes but without reduce and sort
-combineGenotypes2 :: Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
+combineGenotypes2 :: Eq a => Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
 combineGenotypes2 first second = folded
     where
         folded = foldr f [([], 1.0)] castedOffsprings
@@ -331,7 +341,7 @@ combineGenotypes2 first second = folded
         offsprings = filter (/= []) [combine2 traitX traitY | traitX <- first, traitY <- second]
 
 -- combine offsprings but without reduce and sort
-combineOffsprings2 :: forall a. Offspring a -> Offspring a -> Generation a
+combineOffsprings2 :: forall a. Eq a => Offspring a -> Offspring a -> Generation a
 combineOffsprings2 one other = if one == other then Generation [] else Generation result
     where
         resultingGeno :: [(Genotype a, ProbRatio)]
@@ -339,7 +349,7 @@ combineOffsprings2 one other = if one == other then Generation [] else Generatio
         result = map (uncurry Offspring) resultingGeno
 
 -- combine generations but without reduce and sort
-nextGen2 :: Int -> Generation a -> Generation a
+nextGen2 :: Eq a => Int -> Generation a -> Generation a
 nextGen2 bad current | bad <= 0 = current
 nextGen2 1 current = Generation new
     where
