@@ -42,8 +42,6 @@ example1 = do
     -- print $ furTrait [recessiveAllele, recessiveAllele]
     -- print $ eyeSizeTrait [dominantAllele, recessiveAllele]
     -- print catWithBlueFurAndBigEyes
-    -- print $ toPhenotype catWithBlueFurAndBigEyes
-    -- print $ toPhenotype catWithYellowFurAndBigEyes
     print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
     -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
     -- print $ "Second with pedofil: " ++ show (nextWithPedofil 2 Nothing (fromGenotypes [geno1, geno2]))
@@ -56,6 +54,9 @@ example1 = do
 
 data MyCode = A | B | C
 data AllelePair = RR | DR | DD
+
+-- | Represents a single trait i.e. fur
+-- | Has a pair of alleles which corresponds to 
 data Trait a = Trait a AllelePair
 
 
@@ -77,7 +78,12 @@ newtype Generation = Generation {getGeneration :: [Offspring]}
 
 -- | Shows |
 
-instance Show Trait where
+instance Show MyCode where
+    show A = "A"
+    show B = "B"
+    show C = "C"
+
+instance Show a => Show (Trait a) where
     show (Trait c [x, y]) = getCode c x ++ getCode c y
     show (Trait _ _) = "Trait: empty"
 
@@ -114,13 +120,13 @@ instance Eq Trait where
 
 -- example of fur trait, see code
 -- NOTE: dominant is blue, recessive is yellow
-furTrait :: [Allele] -> Trait
-furTrait = Trait "A"
+furTrait :: AllelePair -> Trait MyCode
+furTrait = Trait A
 
 -- example of eye trait, see code
 -- NOTE: dominant is big, recessive is small
-eyeSizeTrait :: [Allele] -> Trait
-eyeSizeTrait = Trait "B"
+eyeSizeTrait :: AllelePair -> Trait MyCode
+eyeSizeTrait = Trait B
 
 exampleFurTrait1 :: Trait
 exampleFurTrait1 = furTrait [dominantAllele, recessiveAllele]
@@ -181,25 +187,10 @@ osp4 = Offspring [furTrait [recessiveAllele, dominantAllele], eyeSizeTrait [rece
 --------------------------------------------------------------------------------
 
 
--- TODO: shitnaming in these 2 function
-codeToUpper :: Code -> Code
-codeToUpper = map toUpper
-
-codeToLower :: Code -> Code
-codeToLower = map toLower
-
-dominantAllele :: Allele
-dominantAllele = Allele Dominant
-
-recessiveAllele :: Allele
-recessiveAllele = Allele Recessive
-
 getCode :: Code -> Allele -> Code
 getCode code trait
     | trait == Allele Dominant = codeToUpper code
     | otherwise = codeToLower code
-
--- sumUpper :: [(a, a), Int] -> (b, ProbRatio)
 
 listToElemWithLength :: [a] -> [(a, Int)]
 listToElemWithLength [] = []
@@ -210,8 +201,6 @@ toCode trait = case mconcat $ getAlleles trait of
     Allele Dominant -> codeToUpper $ representingCode trait
     Allele Recessive -> codeToLower $ representingCode trait
 
-toPhenotype :: Genotype -> Phenotype
-toPhenotype traits = Phenotype (map toCode traits)
 
 fromGenotype :: Int -> Genotype -> Offspring
 fromGenotype n genes = Offspring genes (1.0/n')
@@ -234,7 +223,7 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
             (RR, DR) -> [(DR, 0.5), (RR, 0.5)]
             (RR, DD) -> [(DR, 1.0)]
             (DR, RR) -> [(DR, 0.5), (RR, 0.5)]
-            (DR, DR) -> [(DD, 0.5), (RR, 0.5)]
+            (DR, DR) -> [(DD, 0.25), (DR, 0.5), (RR, 0.25)]
             (DR, DD) -> [(DD, 0.5), (DR, 0.5)]
             (DD, RR) -> [(DR, 1.0)]
             (DD, DR) -> [(DD, 0.5), (RR, 0.5)]
