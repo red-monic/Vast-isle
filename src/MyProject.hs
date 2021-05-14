@@ -37,6 +37,7 @@ example1 = do
     print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
     -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
     print "Given generation is [(DR, DD), (DR, RR)], let's compute rollback from its next gen"
+
     -- print $ rollback (next sampleGeneration2)
 
 --------------------------------------------------------------------------------
@@ -220,11 +221,12 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 combineGenotypes :: Ord a => Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
 combineGenotypes first second = summingUp folded
     where
-        offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
-        castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
-        g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
-        f one other =  [g x y | x <- one, y <- other]
         folded = foldr f [([], 1.0)] castedOffsprings
+        f one other =  [g x y | x <- one, y <- other]
+        g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
+        castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
+        offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
+
 
 -- | combines two offsprings
 -- | returns the lists of the offsprings which can be obtained from the given
@@ -282,7 +284,7 @@ combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
             (DR, DR) -> [(DD, 0.25), (DR, 0.25), (DR, 0.25), (RR, 0.25)]
             (DR, DD) -> [(DD, 0.25), (DD, 0.25), (DR, 0.25), (DR, 0.25)]
             (DD, RR) -> [(DR, 0.25), (DR, 0.25), (DR, 0.25), (DR, 0.25)]
-            (DD, DR) -> [(DD, 0.25), (DD, 0.25), (RR, 0.25), (RR, 0.25)]
+            (DD, DR) -> [(DD, 0.25), (DD, 0.25), (DR, 0.25), (DR, 0.25)]
             (DD, DD) -> [(DD, 0.25), (DD, 0.25), (DD, 0.25), (DD, 0.25)]
 
 
