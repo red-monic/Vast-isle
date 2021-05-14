@@ -303,16 +303,6 @@ summingUp xs = summed
         compact ((x, currProb):xs') = [(x, currProb + sum (map snd xs'))]
 
 
--- IS IT REALLY WORKING??
--- input : nextGen 2 [osp3, osp4]
--- output: [(Offspring: [AA,BB], 0.25000024),
---          (Offspring: [AA,Bb], 2.7500024),
---          (Offspring: [AA,bb], 3.5000033),
---          (Offspring: [Aa,BB], 0.25000024),
---          (Offspring: [Aa,Bb], 2.000002),
---          (Offspring: [Aa,bb], 2.7500024),
---          (Offspring: [aa,Bb], 0.25000024),
---          (Offspring: [aa,bb], 0.25000024)]
 nextGen :: Int -> Generation -> Generation
 nextGen bad current | bad <= 0 = current
 nextGen 1 current = new
