@@ -30,17 +30,10 @@ run = putStrLn "Hello, world!"
 -- | an example of a problem solved with our library
 example1 :: IO ()
 example1 = do
-    -- print Dominant
-    -- print Recessive
-    -- print $ codeToUpper "S"
-    -- print $ codeToUpper "s"
-    -- print $ codeToLower "S"
-    -- print $ codeToLower "s"
     -- print $ furTrait [recessiveAllele, dominantAllele]
     -- print $ furTrait [dominantAllele, dominantAllele]
     -- print $ furTrait [recessiveAllele, recessiveAllele]
     -- print $ eyeSizeTrait [dominantAllele, recessiveAllele]
-    -- print catWithBlueFurAndBigEyes
     print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
     -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
     print "Given generation is [(DR, DD), (DR, RR)], let's compute rollback from its next gen"
@@ -58,8 +51,8 @@ data AllelePair = RR | DR | DD
 -- | Represents a single trait i.e. fur
 -- | Has a pair of alleles which corresponds to 
 data Trait a = Trait a AllelePair
-deriving instance Eq a => Eq (Trait a) 
-deriving instance Ord a => Ord (Trait a) 
+deriving instance Eq a => Eq (Trait a)
+deriving instance Ord a => Ord (Trait a)
 
 -- | Represents a single organism 
 type Genotype a = [Trait a]
@@ -136,22 +129,9 @@ exampleFurTrait1 = furTrait DR
 exampleFurTrait2 :: Trait MyCode
 exampleFurTrait2 = furTrait RR
 
-
-catWithBlueFurAndBigEyes :: Genotype MyCode
-catWithBlueFurAndBigEyes = [
-        eyeSizeTrait DR, -- DR
-        furTrait DR -- DR
-    ]
-
-catWithYellowFurAndBigEyes :: Genotype MyCode
-catWithYellowFurAndBigEyes = [
-        eyeSizeTrait DR, -- DR
-        furTrait RR -- RR
-    ]
-
 -- [(DR, DR), (DR, RR)]
 sampleGeneration1 :: Generation MyCode
-sampleGeneration1 = fromGenotypes [catWithBlueFurAndBigEyes, catWithYellowFurAndBigEyes]
+sampleGeneration1 = fromGenotypes [geno1, geno5]
 
 -- [(DR, DD), (DR, RR)]
 sampleGeneration2 :: Generation MyCode
@@ -188,30 +168,36 @@ osp4 = Offspring [furTrait DR, eyeSizeTrait DR] (2/3)
 --                      Computations and Helper functions                      |
 --------------------------------------------------------------------------------
 
-
+-- | translates all chars from the given string to the upper case
 stringToUpper :: String -> String
 stringToUpper = map toUpper
 
+-- | translates all chars from the given string to the lower case
 stringToLower :: String -> String
 stringToLower = map toLower
 
 
--- | expects 
+-- | for empty list the result is empty
+-- | for non-empty lists returns the list with only one element which is the 
+-- | first element and the length
 listToElemWithLength :: [a] -> [(a, Int)]
 listToElemWithLength [] = []
 listToElemWithLength (x:xs) = [(x, length xs + 1)]
 
-
+-- | given the number of creatures in the generation and a creature, returns
+-- | the offspring instance. the ratio is computed as 1/N
 fromGenotype :: Int -> Genotype a -> Offspring a
 fromGenotype n genes = Offspring genes (1.0/n')
     where
         n' = fromIntegral n
 
+-- | creates a generation from the list of genotypes with fromGenotype
 fromGenotypes :: [Genotype a] -> Generation a
 fromGenotypes xs = Generation $ map (fromGenotype (length xs)) xs
 
-
-combine :: Eq a => Trait a -> Trait a-> [(Trait a, ProbRatio)]
+-- | combines two traits 
+-- | returns the lists of the traits which can be obtained from the given
+combine :: Eq a => Trait a -> Trait a -> [(Trait a, ProbRatio)]
 combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
     where
         result = if oneCode == otherCode
@@ -229,7 +215,8 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
             (DD, DR) -> [(DD, 0.5), (DR, 0.5)]
             (DD, DD) -> [(DD, 1.0)]
 
-
+-- | combines two genotypes 
+-- | returns the lists of the genotypes which can be obtained from the given
 combineGenotypes :: Ord a => Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
 combineGenotypes first second = summingUp folded
     where
@@ -239,7 +226,8 @@ combineGenotypes first second = summingUp folded
         f one other =  [g x y | x <- one, y <- other]
         folded = foldr f [([], 1.0)] castedOffsprings
 
-
+-- | combines two offsprings
+-- | returns the lists of the offsprings which can be obtained from the given
 combineOffsprings :: forall a. (Eq a, Ord a) => Offspring a -> Offspring a -> Generation a
 combineOffsprings one other = if one == other then Generation [] else Generation result
     where
@@ -249,13 +237,10 @@ combineOffsprings one other = if one == other then Generation [] else Generation
         result = map (uncurry Offspring) summed
 
 
-next :: Eq a => Generation a -> Generation a
-next = nextGen2 1
-
 summingUp :: (Ord a, Ord b, Num b) => [([a], b)] -> [([a], b)]
 summingUp xs = summed
     where
-        sorted = sort $ map (\(l, v) -> (sort l, v)) xs
+        sorted = sort $ map (Data.Bifunctor.first sort) xs
         grouped = groupBy comparator sorted
         comparator (l1, _) (l2, _) = l1 == l2
 
@@ -333,3 +318,9 @@ nextGen2 1 current = Generation new
 
         new = concatMap (\generation -> map (\(Offspring g p) -> Offspring g (p * (probability $ getGeneration current))) generation) newGenerations
 nextGen2 n current = nextGen2 (n-1) (nextGen2 1 current)
+
+
+-- | a default implementation for the next function 
+-- | returns the plain result for the generation (i.e. w/o without any reduce)
+next :: Eq a => Generation a -> Generation a
+next = nextGen2 1
