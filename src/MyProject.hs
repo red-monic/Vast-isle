@@ -2,6 +2,8 @@
 {-# OPTIONS_GHC -Wall #-}
 {-# OPTIONS_GHC -fdefer-typed-holes -fshow-hole-constraints -funclutter-valid-hole-fits #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module MyProject where
 
@@ -53,24 +55,28 @@ example1 = do
 --------------------------------------------------------------------------------
 
 data MyCode = A | B | C
+    deriving (Eq, Show)
 data AllelePair = RR | DR | DD
+    deriving (Eq, Show, Ord)
 
 -- | Represents a single trait i.e. fur
 -- | Has a pair of alleles which corresponds to 
 data Trait a = Trait a AllelePair
+deriving instance Eq a => Eq (Trait a)
 
 
 -- | Represents a single organism 
-type Genotype = [Trait]
+type Genotype a = [Trait a]
+-- deriving instance Show a => Show (Genotype a)
 
 -- | The float type is not the best representation for the probability, 
 -- | but it's fine for now
 type ProbRatio = Float
 
-data Offspring = Offspring { getType :: Genotype, prob :: ProbRatio}
+data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio}
     deriving (Eq)
 
-newtype Generation = Generation {getGeneration :: [Offspring]}
+newtype Generation a = Generation {getGeneration :: [Offspring a]}
 
 --------------------------------------------------------------------------------
 --                                Class instances                              |
@@ -78,38 +84,34 @@ newtype Generation = Generation {getGeneration :: [Offspring]}
 
 -- | Shows |
 
-instance Show MyCode where
-    show A = "A"
-    show B = "B"
-    show C = "C"
-
 instance Show a => Show (Trait a) where
-    show (Trait c [x, y]) = getCode c x ++ getCode c y
-    show (Trait _ _) = "Trait: empty"
+    show (Trait c RR) = stringToLower (show c) ++ stringToLower (show c)
+    show (Trait c DR) = stringToUpper (show c) ++ stringToLower (show c)
+    show (Trait c DD) = stringToUpper (show c) ++ stringToUpper (show c)
 
-instance Show Offspring where
+instance (Show a) => Show (Offspring a) where
     show (Offspring geno p) = "Offspring: " ++ concatMap show geno ++ ", " ++ show p
 
-instance Show Generation where
+instance Show a => Show (Generation a) where
     show (Generation gen) = "Generation:\n\t" ++ concatMap ((++ "\n\t") . show) gen
 
 
 -- | Ords |
 
-instance Ord Trait where
-    compare (Trait c1 a1) (Trait c2 a2) = if c1 == c2
-                                        then compare (sort a1) (sort a2)
-                                        else compare (codeToLower c1) (codeToLower c2)
+-- instance Ord Trait where
+--     compare (Trait c1 a1) (Trait c2 a2) = if c1 == c2
+--                                         then compare (sort a1) (sort a2)
+--                                         else compare (codeToLower c1) (codeToLower c2)
 
-instance Ord Offspring where
+instance (Ord a) => Ord (Offspring a) where
     compare (Offspring g1 _) (Offspring g2 _) = compare (sort g1) (sort g2)
 
 
 -- | Eq |
 
-instance Eq Trait where
-    (Trait oneCode oneAlleles) == (Trait otherCode otherAlleles)
-        = sort oneAlleles == sort otherAlleles && oneCode == otherCode
+-- instance Eq a => Eq (Trait a) where
+--     (Trait oneCode oneAlleles) == (Trait otherCode otherAlleles)
+--         = sort oneAlleles == sort otherAlleles && oneCode == otherCode
 
 --------------------------------------------------------------------------------
 --                                   Examples                                  |
@@ -128,58 +130,58 @@ furTrait = Trait A
 eyeSizeTrait :: AllelePair -> Trait MyCode
 eyeSizeTrait = Trait B
 
-exampleFurTrait1 :: Trait
-exampleFurTrait1 = furTrait [dominantAllele, recessiveAllele]
+exampleFurTrait1 :: Trait MyCode
+exampleFurTrait1 = furTrait DR
 
-exampleFurTrait2 :: Trait
-exampleFurTrait2 = furTrait [recessiveAllele, recessiveAllele]
+exampleFurTrait2 :: Trait MyCode
+exampleFurTrait2 = furTrait RR
 
 
-catWithBlueFurAndBigEyes :: Genotype
+catWithBlueFurAndBigEyes :: Genotype MyCode
 catWithBlueFurAndBigEyes = [
-        eyeSizeTrait [dominantAllele, recessiveAllele], -- DR
-        furTrait [dominantAllele, recessiveAllele] -- DR
+        eyeSizeTrait DR, -- DR
+        furTrait DR -- DR
     ]
 
-catWithYellowFurAndBigEyes :: Genotype
+catWithYellowFurAndBigEyes :: Genotype MyCode
 catWithYellowFurAndBigEyes = [
-        eyeSizeTrait [dominantAllele, recessiveAllele], -- DR
-        furTrait [recessiveAllele, recessiveAllele] -- RR
+        eyeSizeTrait DR, -- DR
+        furTrait RR -- RR
     ]
 
 -- [(DR, DR), (DR, RR)]
-sampleGeneration1 :: Generation
+sampleGeneration1 :: Generation MyCode
 sampleGeneration1 = fromGenotypes [catWithBlueFurAndBigEyes, catWithYellowFurAndBigEyes]
 
 -- [(DR, DD), (DR, RR)]
-sampleGeneration2 :: Generation
+sampleGeneration2 :: Generation MyCode
 sampleGeneration2 = fromGenotypes [geno3, geno5]
 
 -- end of Predefined traits and genotypes aka creatures
 
-geno1 :: Genotype
-geno1 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [recessiveAllele, dominantAllele]]
+geno1 :: Genotype MyCode
+geno1 = [eyeSizeTrait DR, furTrait DR]
 
-geno2 :: Genotype
-geno2 = [eyeSizeTrait [dominantAllele, dominantAllele], furTrait [dominantAllele, dominantAllele]]
+geno2 :: Genotype MyCode
+geno2 = [eyeSizeTrait DD, furTrait DD]
 
-geno3 :: Genotype
-geno3 = [eyeSizeTrait [recessiveAllele, dominantAllele], furTrait [dominantAllele, dominantAllele]]
+geno3 :: Genotype MyCode
+geno3 = [eyeSizeTrait DR, furTrait DD]
 
-geno4 :: Genotype
-geno4 = [eyeSizeTrait [dominantAllele, recessiveAllele], furTrait [dominantAllele,recessiveAllele]]
+geno4 :: Genotype MyCode
+geno4 = [eyeSizeTrait DR, furTrait DR]
 
-geno5 :: Genotype
-geno5 = [eyeSizeTrait [dominantAllele, recessiveAllele], furTrait [recessiveAllele, recessiveAllele]]
+geno5 :: Genotype MyCode
+geno5 = [eyeSizeTrait DR, furTrait RR]
 
-osp1 :: Offspring
-osp1 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
-osp2 :: Offspring
-osp2 = Offspring [furTrait [dominantAllele, recessiveAllele], eyeSizeTrait [dominantAllele, recessiveAllele]] (2/3)
-osp3 :: Offspring
-osp3 = Offspring [furTrait [dominantAllele, dominantAllele], eyeSizeTrait [recessiveAllele, recessiveAllele]] (1/3)
-osp4 :: Offspring
-osp4 = Offspring [furTrait [recessiveAllele, dominantAllele], eyeSizeTrait [recessiveAllele, dominantAllele]] (2/3)
+osp1 :: Offspring MyCode
+osp1 = Offspring [furTrait DD, eyeSizeTrait RR] (1/3)
+osp2 :: Offspring MyCode
+osp2 = Offspring [furTrait DR, eyeSizeTrait DR] (2/3)
+osp3 :: Offspring MyCode
+osp3 = Offspring [furTrait DD, eyeSizeTrait RR] (1/3)
+osp4 :: Offspring MyCode
+osp4 = Offspring [furTrait DR, eyeSizeTrait DR] (2/3)
 
 
 --------------------------------------------------------------------------------
@@ -187,31 +189,29 @@ osp4 = Offspring [furTrait [recessiveAllele, dominantAllele], eyeSizeTrait [rece
 --------------------------------------------------------------------------------
 
 
-getCode :: Code -> Allele -> Code
-getCode code trait
-    | trait == Allele Dominant = codeToUpper code
-    | otherwise = codeToLower code
+stringToUpper :: String -> String
+stringToUpper = map toUpper
 
+stringToLower :: String -> String
+stringToLower = map toLower
+
+
+-- | expects 
 listToElemWithLength :: [a] -> [(a, Int)]
 listToElemWithLength [] = []
 listToElemWithLength (x:xs) = [(x, length xs + 1)]
 
-toCode :: Trait -> String
-toCode trait = case mconcat $ getAlleles trait of
-    Allele Dominant -> codeToUpper $ representingCode trait
-    Allele Recessive -> codeToLower $ representingCode trait
 
-
-fromGenotype :: Int -> Genotype -> Offspring
+fromGenotype :: Int -> Genotype a -> Offspring a
 fromGenotype n genes = Offspring genes (1.0/n')
     where
         n' = fromIntegral n
 
-fromGenotypes :: [Genotype] -> Generation
+fromGenotypes :: [Genotype a] -> Generation a
 fromGenotypes xs = Generation $ map (fromGenotype (length xs)) xs
 
 
-combine :: Trait -> Trait -> [(Trait, ProbRatio)]
+combine :: Eq a => Trait a -> Trait a-> [(Trait a, ProbRatio)]
 combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
     where
         result = if oneCode == otherCode
@@ -230,7 +230,7 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
             (DD, DD) -> [(DD, 1.0)]
 
 
-combineGenotypes :: Genotype -> Genotype -> [(Genotype, ProbRatio)]
+combineGenotypes :: Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
 combineGenotypes first second = summingUp folded
     where
         folded = foldr f [([], 1.0)] castedOffsprings
@@ -241,17 +241,16 @@ combineGenotypes first second = summingUp folded
 
 
 
--- -- Что делать с ошибками?
-combineOffsprings :: Offspring  -> Offspring -> Generation
+combineOffsprings :: forall a. Offspring a -> Offspring a -> Generation a
 combineOffsprings one other = if one == other then Generation [] else Generation result
     where
-        resultingGeno :: [(Genotype, ProbRatio)]
+        resultingGeno :: [(Genotype a, ProbRatio)]
         resultingGeno = combineGenotypes (getType one) (getType other)
         summed = summingUp resultingGeno
         result = map (uncurry Offspring) summed
 
 
-next :: Generation -> Generation
+next :: Generation a -> Generation a
 next = nextGen2 1
 
 summingUp :: (Ord a, Ord b, Num b) => [([a], b)] -> [([a], b)]
@@ -269,7 +268,7 @@ summingUp xs = summed
         compact ((x, currProb):xs') = [(x, currProb + sum (map snd xs'))]
 
 
-nextGen :: Int -> Generation -> Generation
+nextGen :: Int -> Generation a -> Generation a
 nextGen bad current | bad <= 0 = current
 nextGen 1 current = Generation new
     where
@@ -306,7 +305,7 @@ nextGen n current = nextGen (n-1) (next current)
 -- second version of combinations to be able to rollback to parents genotypes
 
 -- combine but without reduce and sort
-combine2 :: Trait -> Trait -> [(Trait, ProbRatio)]
+combine2 :: Trait a -> Trait a -> [(Trait a, ProbRatio)]
 combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
     where
         result = if oneCode == otherCode
@@ -314,7 +313,7 @@ combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
                  else [] -- [Left "Representing codes don't match"]
 
         resultingTraits = map transformer allAlleles
-        transformer :: (Allele, Allele) -> (Trait, ProbRatio)
+        -- transformer :: (Allele, Allele) -> (Trait, ProbRatio)
         transformer (alleleA, alleleB) = (newTrait, 1 / fromIntegral combinationNumber)
             where
                 newTrait = Trait oneCode [alleleA, alleleB]
@@ -323,7 +322,7 @@ combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
         allAlleles = [(x, y) | x <- oneAlleles, y <- otherAlleles]
 
 -- combine genotypes but without reduce and sort
-combineGenotypes2 :: Genotype -> Genotype -> [(Genotype, ProbRatio)]
+combineGenotypes2 :: Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
 combineGenotypes2 first second = folded
     where
         folded = foldr f [([], 1.0)] castedOffsprings
@@ -333,15 +332,15 @@ combineGenotypes2 first second = folded
         offsprings = filter (/= []) [combine2 traitX traitY | traitX <- first, traitY <- second]
 
 -- combine offsprings but without reduce and sort
-combineOffsprings2 :: Offspring  -> Offspring -> Generation
+combineOffsprings2 :: forall a. Offspring a -> Offspring a -> Generation a
 combineOffsprings2 one other = if one == other then Generation [] else Generation result
     where
-        resultingGeno :: [(Genotype, ProbRatio)]
+        resultingGeno :: [(Genotype a, ProbRatio)]
         resultingGeno = combineGenotypes2 (getType one) (getType other)
         result = map (uncurry Offspring) resultingGeno
 
 -- combine generations but without reduce and sort
-nextGen2 :: Int -> Generation -> Generation
+nextGen2 :: Int -> Generation a -> Generation a
 nextGen2 bad current | bad <= 0 = current
 nextGen2 1 current = Generation new
     where
