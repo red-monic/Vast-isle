@@ -278,9 +278,6 @@ combineGenotypes first second = summingUp folded
 
 
 
-instance Show [Offspring] where
-    show = ""
-        
 -- -- Что делать с ошибками?
 combineOffsprings :: Offspring  -> Offspring -> Generation
 combineOffsprings one other = if one == other then Generation [] else Generation result
