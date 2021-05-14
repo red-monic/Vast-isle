@@ -323,22 +323,22 @@ nextGen n current = nextGen (n-1) (next current)
 -- есть gen1, gen2 - одинаковые по длине и признаку? если признак есть только во втором?
 -- нужно combine каждый из 1 с каждым из второго N*N 
 
-getUpdated :: Maybe Genotype -> Generation -> Generation
-getUpdated pedofil current = Generation updated
-    where
-        updated = getGeneration current ++ appendix
-        appendix = case pedofil of
-            Nothing -> []
-            (Just p) -> [fromGenotype (length (getGeneration current) + 1) p]
+-- getUpdated :: Maybe Genotype -> Generation -> Generation
+-- getUpdated pedofil current = Generation updated
+--     where
+--         updated = getGeneration current ++ appendix
+--         appendix = case pedofil of
+--             Nothing -> []
+--             (Just p) -> [fromGenotype (length (getGeneration current) + 1) p]
 
-nextWithPedofil :: Int -> Maybe Genotype -> Generation -> Generation
-nextWithPedofil bad _ current | bad <= 0 = current
-nextWithPedofil 1 pedofil current = next (getUpdated pedofil current)
-nextWithPedofil n pedofil current = nextWithPedofil (n-1) newPedofil newGen
-    where
-        newGen = nextGen 1 updated
-        updated = getUpdated pedofil current
-        newPedofil = fmap getType (listToMaybe $ getGeneration newGen)
+-- nextWithPedofil :: Int -> Maybe Genotype -> Generation -> Generation
+-- nextWithPedofil bad _ current | bad <= 0 = current
+-- nextWithPedofil 1 pedofil current = next (getUpdated pedofil current)
+-- nextWithPedofil n pedofil current = nextWithPedofil (n-1) newPedofil newGen
+--     where
+--         newGen = nextGen 1 updated
+--         updated = getUpdated pedofil current
+--         newPedofil = fmap getType (listToMaybe $ getGeneration newGen)
 
 -- second version of combinations to be able to rollback to parents genotypes
 
