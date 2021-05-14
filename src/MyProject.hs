@@ -9,22 +9,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 module MyProject where
 
-import Data.Ratio
 import Data.Char
 import Data.List
-import qualified Data.String
-import Data.Maybe (listToMaybe, isNothing, isJust)
 import qualified Data.Bifunctor
 -- import Data.Text
 
 run :: IO ()
 run = putStrLn "Hello, world!"
-
-
--- TODO:
--- 2. good example (w/ and w/o pedofil)
--- 6. rollback — if 3 is done
--- 7. refactor
 
 
 -- | an example of a problem solved with our library
@@ -68,7 +59,6 @@ type ProbRatio = Float
 -- | will be produced with some ratio
 data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio }
 deriving instance Eq a => Eq (Offspring a)
-
 
 -- | A single generation of offsprings
 newtype Generation a = Generation {getGeneration :: [Offspring a]}
