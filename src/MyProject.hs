@@ -244,12 +244,11 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 combineGenotypes :: Genotype -> Genotype -> [(Genotype, ProbRatio)]
 combineGenotypes first second = summingUp folded
     where
-        folded = foldr f [([], 1.0)] castedOffsprings
-        f one other =  [g x y | x <- one, y <- other]
-        g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
-        castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
         offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
-
+        castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
+        g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
+        f one other =  [g x y | x <- one, y <- other]
+        folded = foldr f [([], 1.0)] castedOffsprings
 
 
 -- -- Что делать с ошибками?
