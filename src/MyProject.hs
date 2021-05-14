@@ -33,6 +33,7 @@ run = putStrLn "Hello, world!"
 -- 4. fix shitty bug (Kamil do it)
 
 
+-- | an example of a problem solved with our library
 example1 :: IO ()
 example1 = do
     -- print Dominant
@@ -57,7 +58,7 @@ example1 = do
 --------------------------------------------------------------------------------
 
 data MyCode = A | B | C
-    deriving (Eq, Show)
+    deriving (Eq, Show, Ord)
 data AllelePair = RR | DR | DD
     deriving (Eq, Show, Ord)
 
@@ -66,7 +67,6 @@ data AllelePair = RR | DR | DD
 data Trait a = Trait a AllelePair
 deriving instance Eq a => Eq (Trait a)
 
-
 -- | Represents a single organism 
 type Genotype a = [Trait a]
 
@@ -74,9 +74,14 @@ type Genotype a = [Trait a]
 -- | but it's fine for now
 type ProbRatio = Float
 
-data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio}
-    deriving (Eq)
 
+-- | Represents an offspring in the generation. It is an organism which
+-- | will be produced with some ratio
+data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio}
+deriving instance Eq a => Eq (Offspring a)
+
+
+-- | A single generation of offsprings
 newtype Generation a = Generation {getGeneration :: [Offspring a]}
 
 --------------------------------------------------------------------------------
@@ -123,13 +128,11 @@ instance (Ord a) => Ord (Offspring a) where
 -- |      Predefined traits and genotypes aka creatures       |
 
 
--- example of fur trait, see code
--- NOTE: dominant is blue, recessive is yellow
+-- in this example we match "fur" <=> A
 furTrait :: AllelePair -> Trait MyCode
 furTrait = Trait A
 
--- example of eye trait, see code
--- NOTE: dominant is big, recessive is small
+-- in this example we match "eyeSize" <=> B
 eyeSizeTrait :: AllelePair -> Trait MyCode
 eyeSizeTrait = Trait B
 
