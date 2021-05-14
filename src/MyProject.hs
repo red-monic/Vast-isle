@@ -233,7 +233,7 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
             (DR, DR) -> [(DD, 0.25), (DR, 0.5), (RR, 0.25)]
             (DR, DD) -> [(DD, 0.5), (DR, 0.5)]
             (DD, RR) -> [(DR, 1.0)]
-            (DD, DR) -> [(DD, 0.5), (RR, 0.5)]
+            (DD, DR) -> [(DD, 0.5), (DR, 0.5)]
             (DD, DD) -> [(DD, 1.0)]
 
 
