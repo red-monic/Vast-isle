@@ -5,6 +5,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 module MyProject where
 
 import Data.Ratio
@@ -67,7 +69,6 @@ deriving instance Eq a => Eq (Trait a)
 
 -- | Represents a single organism 
 type Genotype a = [Trait a]
--- deriving instance Show a => Show (Genotype a)
 
 -- | The float type is not the best representation for the probability, 
 -- | but it's fine for now
@@ -95,6 +96,8 @@ instance (Show a) => Show (Offspring a) where
 instance Show a => Show (Generation a) where
     show (Generation gen) = "Generation:\n\t" ++ concatMap ((++ "\n\t") . show) gen
 
+instance Show a => Show (Genotype a) where
+    show traits = "Genotype: \n\t" ++ concatMap ((++ "\n\t") . show) traits
 
 -- | Ords |
 
