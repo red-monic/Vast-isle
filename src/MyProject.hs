@@ -71,7 +71,7 @@ type ProbRatio = Float
 
 -- | Represents an offspring in the generation. It is an organism which
 -- | will be produced with some ratio
-data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio}
+data Offspring a = Offspring { getType :: Genotype a, prob :: ProbRatio }
 deriving instance Eq a => Eq (Offspring a)
 
 
