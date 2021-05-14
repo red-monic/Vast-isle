@@ -51,7 +51,7 @@ example1 = do
     -- print catWithBlueFurAndBigEyes
     -- print $ toPhenotype catWithBlueFurAndBigEyes
     -- print $ toPhenotype catWithYellowFurAndBigEyes
-    -- print $ "First regular: " ++ show (next (fromGenotypes [geno1, geno2]))
+    print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
     -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
     -- print $ "Second with pedofil: " ++ show (nextWithPedofil 2 Nothing (fromGenotypes [geno1, geno2]))
     print "Given generation is [(DR, DD), (DR, RR)], let's compute rollback from its next gen"
@@ -76,7 +76,7 @@ type ProbRatio = Float
 data Offspring = Offspring { getType :: Genotype, prob :: ProbRatio}
     deriving (Eq)
 
-type Generation = [Offspring]
+newtype Generation = Generation {getGeneration :: [Offspring]}
 
 --------------------------------------------------------------------------------
 --                                Class instances                              |
@@ -92,7 +92,11 @@ instance Show Trait where
     show (Trait _ _) = "Trait: empty"
 
 instance Show Offspring where
-    show (Offspring geno p) = "(Offspring: " ++ show geno ++ ", " ++ show p ++ ")"
+    show (Offspring geno p) = "Offspring: " ++ concatMap show geno ++ ", " ++ show p
+
+instance Show Generation where
+    show (Generation gen) = "Generation:\n\t" ++ concatMap ((++ "\n\t") . show) gen
+
 
 -- |     |
 
@@ -241,7 +245,7 @@ fromGenotype n genes = Offspring genes (1.0/n')
         n' = fromIntegral n
 
 fromGenotypes :: [Genotype] -> Generation
-fromGenotypes xs = map (fromGenotype (length xs)) xs
+fromGenotypes xs = Generation $ map (fromGenotype (length xs)) xs
 
 
 combine :: Trait -> Trait -> [(Trait, ProbRatio)]
@@ -278,8 +282,8 @@ instance Show [Offspring] where
     show = ""
         
 -- -- Что делать с ошибками?
-combineOffsprings :: Offspring  -> Offspring -> [Offspring]
-combineOffsprings one other = if one == other then [] else result
+combineOffsprings :: Offspring  -> Offspring -> Generation
+combineOffsprings one other = if one == other then Generation [] else Generation result
     where
         resultingGeno :: [(Genotype, ProbRatio)]
         resultingGeno = combineGenotypes (getType one) (getType other)
@@ -307,14 +311,15 @@ summingUp xs = summed
 
 nextGen :: Int -> Generation -> Generation
 nextGen bad current | bad <= 0 = current
-nextGen 1 current = new
+nextGen 1 current = Generation new
     where
         probability xs
             | length xs <= 1 = 0
             | otherwise =  1.0 / fromIntegral (length xs * (length xs - 1))
 
-        offspringsCombination = concat [combineOffsprings x y | x <- current, y <- current]
-        preprocessedCombination = map (\(Offspring g p) -> (g, p * (probability current))) offspringsCombination
+        getGen = getGeneration
+        offspringsCombination = concat [getGen $ combineOffsprings x y | x <- getGen current, y <- getGen current]
+        preprocessedCombination = map (\(Offspring g p) -> (g, p * probability (getGen current))) offspringsCombination
         new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
 nextGen n current = nextGen (n-1) (next current)
 
@@ -322,12 +327,12 @@ nextGen n current = nextGen (n-1) (next current)
 -- нужно combine каждый из 1 с каждым из второго N*N 
 
 getUpdated :: Maybe Genotype -> Generation -> Generation
-getUpdated pedofil current = updated
+getUpdated pedofil current = Generation updated
     where
-        updated = current ++ appendix
+        updated = getGeneration current ++ appendix
         appendix = case pedofil of
             Nothing -> []
-            (Just p) -> [fromGenotype (length current + 1) p]
+            (Just p) -> [fromGenotype (length (getGeneration current) + 1) p]
 
 nextWithPedofil :: Int -> Maybe Genotype -> Generation -> Generation
 nextWithPedofil bad _ current | bad <= 0 = current
@@ -336,7 +341,7 @@ nextWithPedofil n pedofil current = nextWithPedofil (n-1) newPedofil newGen
     where
         newGen = nextGen 1 updated
         updated = getUpdated pedofil current
-        newPedofil = fmap getType (listToMaybe newGen)
+        newPedofil = fmap getType (listToMaybe $ getGeneration newGen)
 
 -- second version of combinations to be able to rollback to parents genotypes
 
@@ -368,8 +373,8 @@ combineGenotypes2 first second = folded
         offsprings = filter (/= []) [combine2 traitX traitY | traitX <- first, traitY <- second]
 
 -- combine offsprings but without reduce and sort
-combineOffsprings2 :: Offspring  -> Offspring -> [Offspring]
-combineOffsprings2 one other = if one == other then [] else result
+combineOffsprings2 :: Offspring  -> Offspring -> Generation
+combineOffsprings2 one other = if one == other then Generation [] else Generation result
     where
         resultingGeno :: [(Genotype, ProbRatio)]
         resultingGeno = combineGenotypes2 (getType one) (getType other)
@@ -378,14 +383,14 @@ combineOffsprings2 one other = if one == other then [] else result
 -- combine generations but without reduce and sort
 nextGen2 :: Int -> Generation -> Generation
 nextGen2 bad current | bad <= 0 = current
-nextGen2 1 current = new
+nextGen2 1 current = Generation new
     where
         probability xs
             | length xs <= 1 = 0
             | otherwise =  2.0 / fromIntegral (length xs * (length xs - 1))
 
-        offspringsCombination = filter ((2 == ) . length) $ subsequences current
-        newGenerations = filter (not . null) [combineOffsprings2 x y | [x, y] <- offspringsCombination]
+        offspringsCombination = filter ((2 == ) . length) $ subsequences $ getGeneration current
+        newGenerations = filter (not . null) [getGeneration $ combineOffsprings2 x y | [x, y] <- offspringsCombination]
 
-        new = concatMap (\generation -> map (\(Offspring g p) -> Offspring g (p * (probability current))) generation) newGenerations
+        new = concatMap (\generation -> map (\(Offspring g p) -> Offspring g (p * (probability $ getGeneration current))) generation) newGenerations
 nextGen2 n current = nextGen2 (n-1) (nextGen2 1 current)
