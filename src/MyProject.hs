@@ -56,7 +56,8 @@ deriving instance Eq a => Eq (Trait a)
 deriving instance Ord a => Ord (Trait a)
 
 -- | Represents a single organism 
-type Genotype a = [Trait a]
+newtype Genotype a = Genotype {getGenotype :: [Trait a]}
+deriving instance Eq a => Eq (Genotype a)
 
 -- | The float type is not the best representation for the probability, 
 -- | but it's fine for now
@@ -83,8 +84,11 @@ instance Show a => Show (Trait a) where
     show (Trait c DR) = stringToUpper (show c) ++ stringToLower (show c)
     show (Trait c DD) = stringToUpper (show c) ++ stringToUpper (show c)
 
+instance (Show a) => Show (Genotype a) where
+     show (Genotype traits) = concatMap show traits
+
 instance (Show a) => Show (Offspring a) where
-    show (Offspring geno p) = "Offspring: " ++ concatMap show geno ++ ", " ++ show p
+    show (Offspring geno p) = "Offspring: " ++ concatMap show (getGenotype geno) ++ ", " ++ show p
 
 instance Show a => Show (Generation a) where
     show (Generation gen) = "Generation:\n\t" ++ concatMap ((++ "\n\t") . show) gen
@@ -100,7 +104,7 @@ instance Show a => Show (Generation a) where
 --                                         else compare (codeToLower c1) (codeToLower c2)
 
 instance Ord a => Ord (Offspring a) where
-    compare (Offspring g1 _) (Offspring g2 _) = compare (sort g1) (sort g2)
+    compare (Offspring g1 _) (Offspring g2 _) = compare (sort $ getGenotype g1) (sort $ getGenotype g2)
 
 
 -- | Eq |
@@ -141,28 +145,28 @@ sampleGeneration2 = fromGenotypes [geno3, geno5]
 -- end of Predefined traits and genotypes aka creatures
 
 geno1 :: Genotype MyCode
-geno1 = [eyeSizeTrait DR, furTrait DR]
+geno1 = Genotype [eyeSizeTrait DR, furTrait DR]
 
 geno2 :: Genotype MyCode
-geno2 = [eyeSizeTrait DD, furTrait DD]
+geno2 = Genotype [eyeSizeTrait DD, furTrait DD]
 
 geno3 :: Genotype MyCode
-geno3 = [eyeSizeTrait DR, furTrait DD]
+geno3 = Genotype [eyeSizeTrait DR, furTrait DD]
 
 geno4 :: Genotype MyCode
-geno4 = [eyeSizeTrait DR, furTrait DR]
+geno4 = Genotype [eyeSizeTrait DR, furTrait DR]
 
 geno5 :: Genotype MyCode
-geno5 = [eyeSizeTrait DR, furTrait RR]
+geno5 = Genotype [eyeSizeTrait DR, furTrait RR]
 
 osp1 :: Offspring MyCode
-osp1 = Offspring [furTrait DD, eyeSizeTrait RR] (1/3)
+osp1 = Offspring (Genotype [furTrait DD, eyeSizeTrait RR]) (1/3)
 osp2 :: Offspring MyCode
-osp2 = Offspring [furTrait DR, eyeSizeTrait DR] (2/3)
+osp2 = Offspring (Genotype [furTrait DR, eyeSizeTrait DR]) (2/3)
 osp3 :: Offspring MyCode
-osp3 = Offspring [furTrait DD, eyeSizeTrait RR] (1/3)
+osp3 = Offspring (Genotype [furTrait DD, eyeSizeTrait RR]) (1/3)
 osp4 :: Offspring MyCode
-osp4 = Offspring [furTrait DR, eyeSizeTrait DR] (2/3)
+osp4 = Offspring (Genotype [furTrait DR, eyeSizeTrait DR]) (2/3)
 
 
 --------------------------------------------------------------------------------
@@ -219,13 +223,13 @@ combine (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 -- | combines two genotypes 
 -- | returns the lists of the genotypes which can be obtained from the given
 combineGenotypes :: Ord a => Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
-combineGenotypes first second = summingUp folded
+combineGenotypes first second = map (Data.Bifunctor.first Genotype) (summingUp folded)
     where
         folded = foldr f [([], 1.0)] castedOffsprings
         f one other =  [g x y | x <- one, y <- other]
         g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
         castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
-        offsprings = filter (/= []) [combine traitX traitY | traitX <- first, traitY <- second]
+        offsprings = filter (/= []) [combine traitX traitY | traitX <- getGenotype first, traitY <- getGenotype second]
 
 
 -- | combines two offsprings
@@ -235,7 +239,9 @@ combineOffsprings one other = if one == other then Generation [] else Generation
     where
         resultingGeno :: [(Genotype a, ProbRatio)]
         resultingGeno = combineGenotypes (getType one) (getType other)
-        summed = summingUp resultingGeno
+        summed = map (Data.Bifunctor.first Genotype) $
+                summingUp $
+                map (Data.Bifunctor.first getGenotype) resultingGeno
         result = map (uncurry Offspring) summed
 
 
@@ -265,7 +271,9 @@ nextGen 1 current = Generation new
         getGen = getGeneration
         offspringsCombination = concat [getGen $ combineOffsprings x y | x <- getGen current, y <- getGen current]
         preprocessedCombination = map (\(Offspring g p) -> (g, p * probability (getGen current))) offspringsCombination
-        new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
+        new = map (uncurry Offspring) (map (Data.Bifunctor.first Genotype) $
+                summingUp $
+                map (Data.Bifunctor.first getGenotype) preprocessedCombination)
 nextGen n current = nextGen (n-1) (next current)
 
 -- combine but without reduce and sort
@@ -290,13 +298,14 @@ combine2 (Trait oneCode oneAlleles) (Trait otherCode otherAlleles) = result
 
 -- combine genotypes but without reduce and sort
 combineGenotypes2 :: Eq a => Genotype a -> Genotype a -> [(Genotype a, ProbRatio)]
-combineGenotypes2 first second = folded
+combineGenotypes2 first second = map (Data.Bifunctor.first Genotype) folded
     where
         folded = foldr f [([], 1.0)] castedOffsprings
         f one other =  [g x y | x <- one, y <- other]
         g (old, prevProb) (current, currProb) = (old ++ current, prevProb * currProb)
-        castedOffsprings = map (map (\(x,y) -> ([x], y))) offsprings
-        offsprings = filter (/= []) [combine2 traitX traitY | traitX <- first, traitY <- second]
+        castedOffsprings = map (map (\(x,y) -> ([x], y))) filteredOffsprings
+        filteredOffsprings = filter (/= []) offsprings
+        offsprings = [combine2 traitX traitY | traitX <- getGenotype first, traitY <- getGenotype second]
 
 -- combine offsprings but without reduce and sort
 combineOffsprings2 :: forall a. Eq a => Offspring a -> Offspring a -> Generation a
