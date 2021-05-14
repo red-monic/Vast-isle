@@ -26,10 +26,13 @@ run = putStrLn "Hello, world!"
 -- TODO:
 -- 1. formatting
 -- 2. good example (w/ and w/o pedofil)
--- 3. simple matching with reduce
--- 4. fix shitty bug (Kamil do it)
 -- 5. check pedofil is working
 -- 6. rollback — if 3 is done
+-- 7. refactor
+
+-- DONE:
+-- 3. simple matching with reduce
+-- 4. fix shitty bug (Kamil do it)
 
 
 example1 :: IO ()
