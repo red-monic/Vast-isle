@@ -17,21 +17,14 @@ run :: IO ()
 run = putStrLn "Hello, world!"
 
 
--- temporary = do
---     i <- [1..5]
---     j <- [6..10]
---     -- print 
---     -- return (i, j)
---     return ([1..5] )
-
 -- TODO:
--- 1. formatting
 -- 2. good example (w/ and w/o pedofil)
 -- 5. check pedofil is working
 -- 6. rollback — if 3 is done
 -- 7. refactor
 
 -- DONE:
+-- 1. formatting
 -- 3. simple matching with reduce
 -- 4. fix shitty bug (Kamil do it)
 
@@ -84,9 +77,6 @@ newtype Generation = Generation {getGeneration :: [Offspring]}
 
 -- | Shows |
 
-instance Show Allele where
-    show allele = "Allele: " ++ show (getSort allele)
-
 instance Show Trait where
     show (Trait c [x, y]) = getCode c x ++ getCode c y
     show (Trait _ _) = "Trait: empty"
@@ -98,23 +88,7 @@ instance Show Generation where
     show (Generation gen) = "Generation:\n\t" ++ concatMap ((++ "\n\t") . show) gen
 
 
--- |     |
-
-instance Semigroup Allele where
-    Allele Dominant <> _ = Allele Dominant
-    _ <> Allele Dominant = Allele Dominant
-    _ <> _ = Allele Recessive
-
-instance Monoid Allele where
-    mempty = Allele Recessive
-
 -- | Ords |
-
-instance Ord Allele where
-    compare (Allele Recessive) (Allele Dominant) = GT
-    compare (Allele Dominant) (Allele Recessive) = LT
-    compare (Allele Dominant) (Allele Dominant) = EQ
-    compare (Allele Recessive) (Allele Recessive) = EQ
 
 instance Ord Trait where
     compare (Trait c1 a1) (Trait c2 a2) = if c1 == c2
