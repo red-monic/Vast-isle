@@ -48,6 +48,8 @@ data MyCode = A | B | C
     deriving (Eq, Show, Ord)
 data AllelePair = RR | DR | DD
     deriving (Eq, Show, Ord)
+data Allele = R | D
+    deriving (Eq, Show, Ord)
 
 -- | Represents a single trait i.e. fur
 -- | Has a pair of alleles which corresponds to 
@@ -55,8 +57,15 @@ data Trait a = Trait a AllelePair
 deriving instance Eq a => Eq (Trait a)
 deriving instance Ord a => Ord (Trait a)
 
+-- | Represents a single phenotypic trait i.e. fur
+-- | Has an allele which corresponds to 
+data PhenoTrait a = PhenoTrait a Allele
+
 -- | Represents a single organism 
 type Genotype a = [Trait a]
+
+-- | Represents the exteral signs of organism
+type Phenotype a = [PhenoTrait a]
 
 -- | The float type is not the best representation for the probability, 
 -- | but it's fine for now
@@ -83,8 +92,18 @@ instance Show a => Show (Trait a) where
     show (Trait c DR) = stringToUpper (show c) ++ stringToLower (show c)
     show (Trait c DD) = stringToUpper (show c) ++ stringToUpper (show c)
 
+instance Show a => Show (PhenoTrait a) where
+    show (PhenoTrait c D) = stringToUpper (show c)
+    show (PhenoTrait c R) = stringToLower (show c)
+
 instance (Show a) => Show (Offspring a) where
-    show (Offspring geno p) = "Offspring: " ++ concatMap show geno ++ ", " ++ show p
+    show (Offspring geno p) = 
+        "Offspring: " 
+        ++ concatMap show geno 
+        ++ ", " 
+        ++ concatMap show (genotypeToPhenotype geno) 
+        ++ ", " 
+        ++ show p
 
 instance Show a => Show (Generation a) where
     show (Generation gen) = "Generation:\n\t" ++ concatMap ((++ "\n\t") . show) gen
@@ -196,6 +215,15 @@ fromGenotype n genes = Offspring genes (1.0/n')
 fromGenotypes :: [Genotype a] -> Generation a
 fromGenotypes xs = Generation $ map (fromGenotype (length xs)) xs
 
+-- | converts trait to phenoTrait
+traitToPhenoTrait :: Trait a -> PhenoTrait a
+traitToPhenoTrait (Trait c RR) = PhenoTrait c R
+traitToPhenoTrait (Trait c _)  = PhenoTrait c D
+
+-- | converts genotype to Phenotype
+genotypeToPhenotype :: Genotype a -> Phenotype a
+genotypeToPhenotype = map traitToPhenoTrait
+
 -- | combines two traits 
 -- | returns the lists of the traits which can be obtained from the given
 combine :: Eq a => Trait a -> Trait a -> [(Trait a, ProbRatio)]
@@ -239,6 +267,9 @@ combineOffsprings one other = if one == other then Generation [] else Generation
         result = map (uncurry Offspring) summed
 
 
+-- | groups same items and sums up their probabilities
+-- | first, it needs to sort the items, in order to successfully group them
+-- | returns the uniqie items with their probabilities being summed up
 summingUp :: (Ord a, Ord b, Num b) => [([a], b)] -> [([a], b)]
 summingUp xs = summed
     where
@@ -265,7 +296,7 @@ nextGen 1 current = Generation new
         getGen = getGeneration
         offspringsCombination = concat [getGen $ combineOffsprings x y | x <- getGen current, y <- getGen current]
         preprocessedCombination = map (\(Offspring g p) -> (g, p * probability (getGen current))) offspringsCombination
-        new = map (\(g, p) -> Offspring g p) (summingUp preprocessedCombination)
+        new = map (uncurry Offspring) (summingUp preprocessedCombination)
 nextGen n current = nextGen (n-1) (next current)
 
 -- combine but without reduce and sort
@@ -318,7 +349,7 @@ nextGen2 1 current = Generation new
         offspringsCombination = filter ((2 == ) . length) $ subsequences $ getGeneration current
         newGenerations = filter (not . null) [getGeneration $ combineOffsprings2 x y | [x, y] <- offspringsCombination]
 
-        new = concatMap (\generation -> map (\(Offspring g p) -> Offspring g (p * (probability $ getGeneration current))) generation) newGenerations
+        new = concatMap (map (\(Offspring g p) -> Offspring g (p * (probability $ getGeneration current)))) newGenerations
 nextGen2 n current = nextGen2 (n-1) (nextGen2 1 current)
 
 
