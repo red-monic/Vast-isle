@@ -142,11 +142,11 @@ instance Ord a => Ord (Offspring a) where
 
 -- in this example we match "fur" <=> A
 furTrait :: AllelePair -> Trait MyCode
-furTrait = Trait A
+furTrait = Trait B
 
 -- in this example we match "eyeSize" <=> B
 eyeSizeTrait :: AllelePair -> Trait MyCode
-eyeSizeTrait = Trait B
+eyeSizeTrait = Trait A
 
 exampleFurTrait1 :: Trait MyCode
 exampleFurTrait1 = furTrait DR
