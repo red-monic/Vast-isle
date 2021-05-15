@@ -25,11 +25,14 @@ example1 = do
     -- print $ furTrait [dominantAllele, dominantAllele]
     -- print $ furTrait [recessiveAllele, recessiveAllele]
     -- print $ eyeSizeTrait [dominantAllele, recessiveAllele]
-    print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
+    -- print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
     -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
-    print "Given generation is [(DR, DD), (DR, RR)], let's compute rollback from its next gen"
-
-    -- print $ rollback (next sampleGeneration2)
+    putStrLn $ "Given:"
+    print sampleGeneration3 
+    putStrLn $ "Let's compute next generation with reducing and summing up"
+    print (nextGen 1 sampleGeneration3)
+    putStrLn $ "Let's compute next generation without reducing"
+    print (nextGen2 1 sampleGeneration3)
 
 --------------------------------------------------------------------------------
 -- |                   Data, newtypes and types declaration                    |
@@ -128,22 +131,25 @@ sampleGeneration1 = fromGenotypes [geno1, geno5]
 sampleGeneration2 :: Generation MyCode
 sampleGeneration2 = fromGenotypes [geno3, geno5]
 
+sampleGeneration3 :: Generation MyCode
+sampleGeneration3 = fromGenotypes [geno1, geno2, geno3, geno4]
+
 -- end of Predefined traits and genotypes aka creatures
 
 geno1 :: Genotype MyCode
-geno1 = [eyeSizeTrait DR, furTrait DR]
+geno1 = [furTrait DR, eyeSizeTrait DR]
 
 geno2 :: Genotype MyCode
-geno2 = [eyeSizeTrait DD, furTrait DD]
+geno2 = [furTrait DD, eyeSizeTrait DD]
 
 geno3 :: Genotype MyCode
-geno3 = [eyeSizeTrait DR, furTrait DD]
+geno3 = [furTrait DD, eyeSizeTrait DR]
 
 geno4 :: Genotype MyCode
-geno4 = [eyeSizeTrait DR, furTrait DR]
+geno4 = [furTrait DR, eyeSizeTrait DR]
 
 geno5 :: Genotype MyCode
-geno5 = [eyeSizeTrait DR, furTrait RR]
+geno5 = [furTrait RR, eyeSizeTrait DR]
 
 osp1 :: Offspring MyCode
 osp1 = Offspring [furTrait DD, eyeSizeTrait RR] (1/3)
