@@ -33,6 +33,15 @@ example1 = do
     putStrLn "2nd generation offfsprings of current generation (offsprings with same genotype are combined into one):"
     print $ nextGen 2 sampleGeneration1
 
+example2 :: IO ()
+example2 = do
+    putStrLn $ "Given:"
+    print sampleGeneration3 
+    putStrLn $ "Let's compute next generation with reducing and summing up"
+    print (nextGen 1 sampleGeneration3)
+    putStrLn $ "Let's compute next generation without reducing"
+    print (nextGen2 1 sampleGeneration3)
+
 --------------------------------------------------------------------------------
 -- |                   Data, newtypes and types declaration                    |
 --------------------------------------------------------------------------------
