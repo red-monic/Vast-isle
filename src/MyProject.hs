@@ -153,6 +153,9 @@ sampleGeneration1 = fromGenotypes [geno1, geno5]
 sampleGeneration2 :: Generation MyCode
 sampleGeneration2 = fromGenotypes [geno3, geno5]
 
+sampleGeneration3 :: Generation MyCode
+sampleGeneration3 = fromGenotypes [geno1, geno2, geno3, geno4]
+
 -- end of Predefined traits and genotypes aka creatures
 
 geno1 :: Genotype MyCode
