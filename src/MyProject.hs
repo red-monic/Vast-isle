@@ -21,15 +21,17 @@ run = putStrLn "Hello, world!"
 -- | an example of a problem solved with our library
 example1 :: IO ()
 example1 = do
-    -- print $ furTrait [recessiveAllele, dominantAllele]
-    -- print $ furTrait [dominantAllele, dominantAllele]
-    -- print $ furTrait [recessiveAllele, recessiveAllele]
-    -- print $ eyeSizeTrait [dominantAllele, recessiveAllele]
-    print $ "First regular: " ++ show (getGeneration $ next $ fromGenotypes [geno1, geno2])
-    -- print $ "Second regular: " ++ show (nextGen 2 (fromGenotypes [geno1, geno2]))
-    print "Given generation is [(DR, DD), (DR, RR)], let's compute rollback from its next gen"
+    putStrLn "In this example we will generate offsprings of the following generation:"
+    print sampleGeneration1
 
-    -- print $ rollback (next sampleGeneration2)
+    putStrLn "Direct offfsprings of current generation (offsprings with same genotype are combined into one):"
+    print $ nextGen 1 sampleGeneration1
+
+    putStrLn "Direct offfsprings of current generation:"
+    print $ nextGen2 1 sampleGeneration1
+
+    putStrLn "2nd generation offfsprings of current generation (offsprings with same genotype are combined into one):"
+    print $ nextGen 2 sampleGeneration1
 
 --------------------------------------------------------------------------------
 -- |                   Data, newtypes and types declaration                    |
