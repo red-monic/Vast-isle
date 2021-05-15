@@ -15,7 +15,7 @@ import qualified Data.Bifunctor
 -- import Data.Text
 
 run :: IO ()
-run = putStrLn "Hello, world!"
+run = example1
 
 
 -- | an example of a problem solved with our library
