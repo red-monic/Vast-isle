@@ -15,7 +15,11 @@ import qualified Data.Bifunctor
 -- import Data.Text
 
 run :: IO ()
-run = example1
+run = do 
+    putStrLn "======================== EXAMPLE 1 ========================"
+    example1
+    putStrLn "======================== EXAMPLE 2 ========================"
+    example2
 
 
 -- | an example of a problem solved with our library
